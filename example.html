@@ -15,13 +15,13 @@
 
     <script>
     var tpl = pluto(document.querySelector('#roi'))
-    var doc = tpl.render({
-        hello: 'okay'
-    })
+    var doc = tpl.render({ hello: 'okay' })
     document.body.appendChild(doc)
-    doc.render({
-        hello: 'cookie'
-    })
+
+    setTimeout(function() {
+        doc.render({ hello: 'CHANGED' })
+    }, 500)
+
     </script>
 </body>
 </html>
