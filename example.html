@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+</head>
+<body>
+    <script src="pluto.js" charset="utf-8"></script>
+
+    <template is='pluto-tpl' id='roi'>
+        <template is='pluto-tpl'>
+            <div>Text Is: <span>{{hello}}</span></div>
+            <div>NICE</div>
+        </template>
+        <h1>{{hello}}</h1>
+    </template>
+
+    <script>
+    var tpl = pluto(document.querySelector('#roi'))
+    var doc = tpl.render({
+        hello: 'okay'
+    })
+    document.body.appendChild(doc)
+    doc.render({
+        hello: 'cookie'
+    })
+    </script>
+</body>
+</html>
