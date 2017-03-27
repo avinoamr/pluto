@@ -6,21 +6,20 @@
     <script src="pluto.js" charset="utf-8"></script>
 
     <template is='pluto-tpl' id='roi'>
-        <template is='pluto-tpl'>
-            <div>Text Is: <span>{{hello}}</span></div>
-            <div>NICE</div>
-        </template>
         <h1>{{hello}}</h1>
     </template>
 
     <script>
     var tpl = pluto(document.querySelector('#roi'))
-    var doc = tpl.render({ hello: 'okay' })
+    var doc = tpl.render({
+        hello: 'okay',
+        items: [ 'one', 'two' ]
+    })
     document.body.appendChild(doc)
 
-    setTimeout(function() {
-        doc.render({ hello: 'CHANGED' })
-    }, 500)
+    // setTimeout(function() {
+    //     doc.render({ hello: 'CHANGED', items: [ 'three', 'four', 'five' ] })
+    // }, 500)
 
     </script>
 </body>

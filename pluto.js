@@ -10,6 +10,15 @@
     }
 
     class Template extends HTMLTemplateElement {
+
+        setAttribute(k, v) {
+            HTMLTemplateElement.prototype.setAttribute.apply(this, arguments)
+
+            if (k === 'repeat') {
+                this._repeat = v
+            }
+        }
+
         render(obj) {
             this.compile()
 
@@ -18,7 +27,6 @@
             // (createdCallback) before all of the attributes are set.
             var clone = this.cloneNode(true)
             // this._render(this.tokens, clone.content, obj)
-            // this._render(this.tokens, clone.content, obj)
 
             // NOTE: Yeah, it does mean that we clone it twice. Alternatively,
             // (1) we can opt to render on the template itself, but this will
@@ -26,52 +34,14 @@
             // dynamic changes and then re-compile. (2) we can create a clone
             // just once as using it a scratch space.
             var doc = document.importNode(clone.content, true)
-
             this._render(this.tokens, doc, obj) // NOTE TEMPORARY.
-
-
-            doc.render = this._rerender.bind(this, this.tokens, doc)
             return doc
         }
 
-        _rerender(tokens, into, obj) {
-            var data = into.data
-            for (var i = 0 ; i < tokens.length ; i += 1) {
-                var t = tokens[i]
-                var el = data[t.path]
-
-                if (t.tpl) {
-                    el.render(obj)
-                    continue
-                }
-
-                var v = getPath(obj, t.name)
-                if (!t.attr) {
-                    el.textContent = v || ''
-                } else if (v === undefined) {
-                    el.removeAttribute(t.attr)
-                } else {
-                    el.setAttribute(t.attr, v)
-                }
-            }
-        }
-
         _render(tokens, into, obj) {
-            var data = {}
-            var subdocs = []
             for (var i = 0 ; i < tokens.length ; i += 1) {
                 var t = tokens[i]
                 var el = getPath(into, t.path)
-                data[t.path] = el
-
-                if (t.tpl) {
-                    var doc = pluto(el).render(obj)
-                    doc.el = el
-                    subdocs.push(doc)
-                    data[t.path] = doc
-                    continue
-                }
-
                 var v = getPath(obj, t.name)
                 if (!t.attr) {
                     el.textContent = v || ''
@@ -81,12 +51,6 @@
                     el.setAttribute(t.attr, v)
                 }
             }
-
-            subdocs.forEach(function (doc) {
-                into.insertBefore(doc, doc.el.nextSibling)
-            })
-
-            into.data = data
         }
 
         compile() {
@@ -117,9 +81,7 @@
                 // children, enqueue.
                 [].forEach.call(el.children || [], function(el, i) {
                     elements.push({ el, path: path.concat(['children', i]) })
-                    if (el.matches('template[is="pluto-tpl"]')) {
-                        pluto(el) // auto-upgrade nested templates.
-                    }
+                    maybeUpgrade(el)
                 })
             }
 
@@ -129,8 +91,19 @@
 
     pluto.Template = Template
 
+    function maybeUpgrade(el) {
+        if (el.matches('template[is="pluto-tpl"]')) {
+            pluto(el) // auto-upgrade nested templates.
+        }
+    }
 
     // -- HELPER FUNCTIONS
+
+    function empty(el) {
+        while (el.children.length > 0) {
+            el.removeChild(el.children[0])
+        }
+    }
 
     function toObj(obj) {
         if (obj instanceof NamedNodeMap) {
