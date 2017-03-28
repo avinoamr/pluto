@@ -20,13 +20,13 @@
     var doc = tpl.render({ item: 'hello', items: ['one', 'two'] })
     document.body.appendChild(doc)
 
-    // setTimeout(function() {
-    //     doc.render({ item: 'cookie', items: ['three'] })
-    // }, 500)
-    //
-    // setTimeout(function() {
-    //     doc.render({ item: 'cookie', items: ['four', 'five'] })
-    // }, 1000)
+    setTimeout(function() {
+        doc.render({ item: 'cookie', items: ['three'] })
+    }, 500)
+    
+    setTimeout(function() {
+        doc.render({ item: 'cookie', items: ['four', 'five'] })
+    }, 1000)
 
     // function render() {
     //     var data = { item: new Date().toISOString() }

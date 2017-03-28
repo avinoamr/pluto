@@ -105,8 +105,12 @@
             }
 
             subtpls.forEach(function(tpl) {
-                var doc = pluto(tpl).render(obj)
-                tpl.parentNode.replaceChild(doc, tpl)
+                if (!tpl._doc) {
+                    tpl._doc = pluto(tpl).render(obj)
+                    tpl.parentNode.replaceChild(tpl._doc, tpl)
+                } else {
+                    tpl._doc.render(obj)
+                }
             }, this)
 
             return this._renderable(this.doc)
