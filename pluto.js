@@ -24,6 +24,15 @@
             this._repeat = tokenName(tpl.getAttribute('repeat'))
         }
 
+        appendTo(el) {
+            this.children.forEach(function (child) {
+                (child instanceof RenderFragment)
+                    ? child.appendTo(el)
+                    : el.appendChild(child)
+            })
+            return el
+        }
+
         _renderable(obj) {
             obj.render = this.render.bind(this)
             return obj
@@ -117,6 +126,91 @@
         }
     }
 
+    class Renderer {
+        constructor(tpl, tokens) {
+            this.tpl = tpl
+            this.tokens = tokens
+
+            var doc = this.tpl.cloneNode(true).content
+            this.paths = this.tokens.reduce(function(paths, t) {
+                paths[t.path] = getPath(doc, t.path)
+                return paths
+            }, {})
+
+            this.children = [].map.call(doc.children, child => child)
+            this.doc = doc
+        }
+
+        replaceWith(el) {
+            var first = this.children.pop()
+            first.parentNode.replaceChild(el, first)
+            this.remove()
+        }
+
+        remove() {
+            while (this.children.length > 0) {
+                this.children.pop().remove()
+            }
+        }
+
+        render(obj) {
+            var doc = this.doc || null
+            this.doc = null
+
+            var tokens = this.tokens
+            for (var i = 0 ; i < tokens.length ; i += 1) {
+                var t = tokens[i]
+                var el = this.paths[t.path]
+                var v = getPath(obj, t.name)
+
+                // nested template
+                if (t.tpl) {
+                    continue
+                }
+
+                if (!t.attr) {
+                    el.textContent = v || ''
+                } else if (v === undefined) {
+                    el.removeAttribute(t.attr)
+                } else {
+                    el.setAttribute(t.attr, v)
+                }
+            }
+
+            return doc
+        }
+    }
+
+    class IfRenderer {
+        constructor(tpl, tokens, if_) {
+            this.tpl = tpl
+            this.tokens = tokens
+            this.if = if_
+        }
+
+        render(obj) {
+            var if_ = getPath(obj, this.if)
+
+            var doc
+            if (!this.placeholder) {
+                this.placeholder = placeholder()
+                doc = new DocumentFragment()
+                doc.appendChild(this.placeholder)
+            }
+
+            if (!if_ && this.child) {
+                this.child = this.child.replaceWith(this.placeholder)
+            } else if (if_ && !this.child) {
+                this.child = new Renderer(this.tpl, this.tokens)
+                var subdoc = this.child.render(obj)
+                this.placeholder.replaceWith(subdoc)
+            }
+
+            return doc
+        }
+
+    }
+
     class Template extends HTMLTemplateElement {
 
         setAttribute(k, v) {
@@ -129,7 +223,29 @@
 
         render(obj) {
             this.compile()
-            return new RenderFragment(this, this.tokens).render(obj)
+
+            var renderer
+            if (this.repeat) {
+                renderer = new RepeatRenderer(this, this.tokens, this.repeat)
+            } else if (this.if) {
+                renderer = new IfRenderer(this, this.tokens, this.if)
+            } else {
+                renderer = new Renderer(this, this.tokens)
+            }
+
+            var doc = new DocumentFragment()
+            doc.render = function(obj) {
+                var appendDoc = renderer.render(obj)
+
+                // move the new elements to the final doc
+                while (appendDoc && appendDoc.children.length > 0) {
+                    doc.appendChild(appendDoc.children[0])
+                }
+
+                return this
+            }
+
+            return doc.render(obj)
         }
 
         renderer() {
@@ -175,19 +291,30 @@
             }
 
             this.tokens = tokens
+            this.repeat = tokenName(this.getAttribute('repeat'))
+            this.if = tokenName(this.getAttribute('if'))
         }
     }
 
     pluto.Template = Template
     pluto.RenderFragment = RenderFragment
 
+    // -- HELPER FUNCTIONS
+
+    function placeholder() {
+        var el = document.createElement('template')
+        el.setAttribute('is', 'pluto-placeholder')
+        el.replaceWith = function(el) {
+            return this.parentNode.replaceChild(el, this)
+        }
+        return el
+    }
+
     function maybeUpgrade(el) {
         if (el.matches('template[is="pluto-tpl"]')) {
             pluto(el) // auto-upgrade nested templates.
         }
     }
-
-    // -- HELPER FUNCTIONS
 
     function empty(el) {
         while (el.children.length > 0) {

@@ -5,19 +5,13 @@
 <body>
     <script src="pluto.js" charset="utf-8"></script>
 
-    <template is='pluto-tpl' id='roi'>
+    <template is='pluto-tpl' id='roi' if={{show}}>
         <h1>{{item}}</h1>
-
-        <ul>
-            <template is='pluto-tpl' repeat={{items}}>
-                <li>{{item}}</li>
-            </template>
-        </ul>
     </template>
 
     <script>
     var tpl = pluto(document.querySelector('#roi'))
-    var doc = tpl.render({ item: 'hello', items: ['one', 'two'] })
+    var doc = tpl.render({ show: true, item: 'hello', items: ['one', 'two'] })
     document.body.appendChild(doc)
 
     setTimeout(function() {
@@ -25,7 +19,7 @@
     }, 500)
     
     setTimeout(function() {
-        doc.render({ item: 'cookie', items: ['four', 'five'] })
+        doc.render({ show: true, item: 'final', items: ['four', 'five'] })
     }, 1000)
 
     // function render() {
