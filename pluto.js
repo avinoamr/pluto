@@ -20,45 +20,67 @@
         constructor(tpl, tokens) {
             this.tpl = tpl
             this.tokens = tokens
+
+            this._repeat = tokenName(tpl.getAttribute('repeat'))
         }
 
-        _toDoc(doc) {
-            doc.render = this.render.bind(this) // re-renders.
-            return doc
+        _renderable(obj) {
+            obj.render = this.render.bind(this)
+            return obj
+        }
+
+        remove() {
+            this.children.forEach(function(child) {
+                child.remove()
+            })
         }
 
         renderRepeat(obj) {
-            this._repeat.forEach(function (item, idx) {
-                if (!this.children[idx]) {
-                    // create the new sub-fragment
-                    this.children[idx] = new RenderFragment(this._tpl)
-                    this.children[idx]._repeat = null
-                    // TODO: append it?
-                }
+            var repeat = getPath(obj, this._repeat) || []
+            if (!this.doc || !this.children) {
+                this.placeholder = document.createElement('template')
+                this.placeholder.setAttribute('is', 'pluto-placeholder')
+                this.doc = new DocumentFragment()
+                this.doc.appendChild(this.placeholder)
+                this.children = []
+            }
 
-                // and now render it.
+            // remove elements
+            while (this.children.length > repeat.length) {
+                this.children.pop().remove()
+            }
+
+            // add new elements
+            while (this.children.length < repeat.length) {
+                var child = new RenderFragment(this.tpl, this.tokens)
+                child._repeat = null
+                this.children.push(child)
+            }
+
+            repeat.forEach(function (item, idx) {
+                var child = this.children[idx]
                 obj.item = item
-                this.children[idx].render(obj)
+                var doc = child.render(obj)
+                this.placeholder.parentNode.insertBefore(doc, this.placeholder)
             }, this)
 
-            return this.toDoc()
+            return this._renderable(this.doc)
         }
 
         render(obj) {
+            if (this._repeat) {
+                return this.renderRepeat(obj)
+            }
+
             var tokens = this.tokens
-            var doc = new DocumentFragment()
-            if (!this.children) {
-                // first render
-                doc = this.tpl.cloneNode(true).content
-                var children = [].map.call(doc.children, function(child) {
-                    return child
-                })
-                this.children = { children: children }
+            if (!this.doc || !this.children) {
+                this.doc = this.tpl.cloneNode(true).content
+                this.children = [].map.call(this.doc.children, (child) => child)
             }
 
             for (var i = 0 ; i < tokens.length ; i += 1) {
                 var t = tokens[i]
-                var el = getPath(this.children, t.path)
+                var el = getPath(this, t.path)
                 var v = getPath(obj, t.name)
                 if (!t.attr) {
                     el.textContent = v || ''
@@ -69,7 +91,7 @@
                 }
             }
 
-            return doc
+            return this._renderable(this.doc)
         }
     }
 
@@ -81,6 +103,11 @@
             if (k === 'repeat') {
                 this._repeat = v
             }
+        }
+
+        render(obj) {
+            this.compile()
+            return new RenderFragment(this, this.tokens).render(obj)
         }
 
         renderer() {

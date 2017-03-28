@@ -5,23 +5,32 @@
 <body>
     <script src="pluto.js" charset="utf-8"></script>
 
-    <template is='pluto-tpl' id='roi'>
+    <template is='pluto-tpl' id='roi' repeat={{items}}>
         <h1>{{item}}</h1>
     </template>
 
     <script>
     var tpl = pluto(document.querySelector('#roi'))
-    var renderer = tpl.renderer()
+    var doc = tpl.render({ item: 'hello', items: ['one', 'two'] })
+    document.body.appendChild(doc)
 
-    function render() {
-        var data = { item: new Date().toISOString() }
-        var doc = renderer.render(data)
-        document.body.appendChild(doc)
+    setTimeout(function() {
+        doc.render({ item: 'cookie', items: ['three'] })
+    }, 500)
 
-        // setTimeout(render, 200)
-    }
+    setTimeout(function() {
+        doc.render({ item: 'cookie', items: ['four', 'five'] })
+    }, 1000)
 
-    render()
+    // function render() {
+    //     var data = { item: new Date().toISOString() }
+    //     var doc = renderer.render(data)
+    //     document.body.appendChild(doc)
+    //
+    // }
+    //
+    // render()
+    // setTimeout(render, 200)
     </script>
 </body>
 </html>
