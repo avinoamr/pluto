@@ -78,10 +78,23 @@
                 this.children = [].map.call(this.doc.children, (child) => child)
             }
 
+            this.paths = this.paths || {}
+            var subtpls = []
             for (var i = 0 ; i < tokens.length ; i += 1) {
                 var t = tokens[i]
-                var el = getPath(this, t.path)
+                if (!this.paths[t.path]) {
+                    this.paths[t.path] = getPath(this, t.path)
+                }
+
+                var el = this.paths[t.path]
                 var v = getPath(obj, t.name)
+
+                // nested template
+                if (t.tpl) {
+                    subtpls.push(el)
+                    continue
+                }
+
                 if (!t.attr) {
                     el.textContent = v || ''
                 } else if (v === undefined) {
@@ -90,6 +103,11 @@
                     el.setAttribute(t.attr, v)
                 }
             }
+
+            subtpls.forEach(function(tpl) {
+                var doc = pluto(tpl).render(obj)
+                tpl.parentNode.replaceChild(doc, tpl)
+            }, this)
 
             return this._renderable(this.doc)
         }
@@ -137,13 +155,18 @@
 
                 if (el instanceof Template) {
                     tokens.push({ path, tpl: true })
-                    // console.log('NESTED?', el)
                 }
 
                 // children, enqueue.
                 [].forEach.call(el.children || [], function(el, i) {
-                    elements.push({ el, path: path.concat(['children', i]) })
                     maybeUpgrade(el)
+                    var subpath = path.concat(['children', i])
+                    if (el instanceof Template) {
+                        tokens.push({ path: subpath, tpl: true })
+                        return
+                    }
+
+                    elements.push({ el, path: subpath })
                 })
             }
 

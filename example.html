@@ -5,8 +5,14 @@
 <body>
     <script src="pluto.js" charset="utf-8"></script>
 
-    <template is='pluto-tpl' id='roi' repeat={{items}}>
+    <template is='pluto-tpl' id='roi'>
         <h1>{{item}}</h1>
+
+        <ul>
+            <template is='pluto-tpl' repeat={{items}}>
+                <li>{{item}}</li>
+            </template>
+        </ul>
     </template>
 
     <script>
@@ -14,13 +20,13 @@
     var doc = tpl.render({ item: 'hello', items: ['one', 'two'] })
     document.body.appendChild(doc)
 
-    setTimeout(function() {
-        doc.render({ item: 'cookie', items: ['three'] })
-    }, 500)
-
-    setTimeout(function() {
-        doc.render({ item: 'cookie', items: ['four', 'five'] })
-    }, 1000)
+    // setTimeout(function() {
+    //     doc.render({ item: 'cookie', items: ['three'] })
+    // }, 500)
+    //
+    // setTimeout(function() {
+    //     doc.render({ item: 'cookie', items: ['four', 'five'] })
+    // }, 1000)
 
     // function render() {
     //     var data = { item: new Date().toISOString() }
