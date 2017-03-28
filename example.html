@@ -6,21 +6,22 @@
     <script src="pluto.js" charset="utf-8"></script>
 
     <template is='pluto-tpl' id='roi'>
-        <h1>{{hello}}</h1>
+        <h1>{{item}}</h1>
     </template>
 
     <script>
     var tpl = pluto(document.querySelector('#roi'))
-    var doc = tpl.render({
-        hello: 'okay',
-        items: [ 'one', 'two' ]
-    })
-    document.body.appendChild(doc)
+    var renderer = tpl.renderer()
 
-    // setTimeout(function() {
-    //     doc.render({ hello: 'CHANGED', items: [ 'three', 'four', 'five' ] })
-    // }, 500)
+    function render() {
+        var data = { item: new Date().toISOString() }
+        var doc = renderer.render(data)
+        document.body.appendChild(doc)
 
+        // setTimeout(render, 200)
+    }
+
+    render()
     </script>
 </body>
 </html>

@@ -9,6 +9,70 @@
             : Object.setPrototypeOf(el, Template.prototype)
     }
 
+    // RenderFragment represents a single rendered template, along with its
+    // state and hard-links to the elements it generated and owns, in order
+    // to support re-rendering.
+    //
+    // NOTE we can't inherit directly from DocumentFragment. Instead, we use
+    // this intemediate object that handles the rendering, while only exposing
+    // its `render()` function on the returned DocumentFragment via `toDoc()`.
+    class RenderFragment {
+        constructor(tpl, tokens) {
+            this.tpl = tpl
+            this.tokens = tokens
+        }
+
+        _toDoc(doc) {
+            doc.render = this.render.bind(this) // re-renders.
+            return doc
+        }
+
+        renderRepeat(obj) {
+            this._repeat.forEach(function (item, idx) {
+                if (!this.children[idx]) {
+                    // create the new sub-fragment
+                    this.children[idx] = new RenderFragment(this._tpl)
+                    this.children[idx]._repeat = null
+                    // TODO: append it?
+                }
+
+                // and now render it.
+                obj.item = item
+                this.children[idx].render(obj)
+            }, this)
+
+            return this.toDoc()
+        }
+
+        render(obj) {
+            var tokens = this.tokens
+            var doc = new DocumentFragment()
+            if (!this.children) {
+                // first render
+                doc = this.tpl.cloneNode(true).content
+                var children = [].map.call(doc.children, function(child) {
+                    return child
+                })
+                this.children = { children: children }
+            }
+
+            for (var i = 0 ; i < tokens.length ; i += 1) {
+                var t = tokens[i]
+                var el = getPath(this.children, t.path)
+                var v = getPath(obj, t.name)
+                if (!t.attr) {
+                    el.textContent = v || ''
+                } else if (v === undefined) {
+                    el.removeAttribute(t.attr)
+                } else {
+                    el.setAttribute(t.attr, v)
+                }
+            }
+
+            return doc
+        }
+    }
+
     class Template extends HTMLTemplateElement {
 
         setAttribute(k, v) {
@@ -19,38 +83,9 @@
             }
         }
 
-        render(obj) {
+        renderer() {
             this.compile()
-
-            // initial render on the clone of this template before importing it
-            // because otherwise it will start firing custom-elements reactions
-            // (createdCallback) before all of the attributes are set.
-            var clone = this.cloneNode(true)
-            // this._render(this.tokens, clone.content, obj)
-
-            // NOTE: Yeah, it does mean that we clone it twice. Alternatively,
-            // (1) we can opt to render on the template itself, but this will
-            // reveal the rendered template and will make it impossible to make
-            // dynamic changes and then re-compile. (2) we can create a clone
-            // just once as using it a scratch space.
-            var doc = document.importNode(clone.content, true)
-            this._render(this.tokens, doc, obj) // NOTE TEMPORARY.
-            return doc
-        }
-
-        _render(tokens, into, obj) {
-            for (var i = 0 ; i < tokens.length ; i += 1) {
-                var t = tokens[i]
-                var el = getPath(into, t.path)
-                var v = getPath(obj, t.name)
-                if (!t.attr) {
-                    el.textContent = v || ''
-                } else if (v === undefined) {
-                    el.removeAttribute(t.attr)
-                } else {
-                    el.setAttribute(t.attr, v)
-                }
-            }
+            return new RenderFragment(this, this.tokens)
         }
 
         compile() {
@@ -90,6 +125,7 @@
     }
 
     pluto.Template = Template
+    pluto.RenderFragment = RenderFragment
 
     function maybeUpgrade(el) {
         if (el.matches('template[is="pluto-tpl"]')) {
