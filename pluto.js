@@ -77,6 +77,10 @@
                 } else if (typeof v === 'function' && t.attr.startsWith('on')) {
                     el[t.attr] = v // event listener
                     el.removeAttribute(t.attr) // hide attribute in DOM
+                } else if (typeof v !== 'string') {
+                    if (el.attributeChangedCallback) {
+                        el.attributeChangedCallback(t.attr, null, v)
+                    }
                 } else {
                     el.setAttribute(t.attr, v)
                 }
