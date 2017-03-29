@@ -18,17 +18,28 @@
     }
 
     class Renderer {
-        constructor(tpl, doc) {
+        constructor(tpl) {
+            this.tpl = tpl
             this.tokens = tpl.tokens
+        }
 
-            doc.appendChild(tpl.cloneNode(true).content)
+        remove() {
+            while (this.children.length > 0) {
+                this.children.pop().remove()
+            }
+        }
+
+        init(obj) {
+            var doc = this.tpl.cloneNode(true).content
+            doc.render = (obj) => (this.render(obj), doc)
+            doc.remove = () => this.remove()
 
             // generate hard links from tokens to the generated elements in
             // order to avoid re-computing them on every render.
-            this.paths = tpl.tokens.reduce(function (paths, t) {
+            this.paths = this.tokens.reduce(function (paths, t) {
                 var el = getPath(doc, t.path)
                 if (t.tpl) {
-                    var subdoc = pluto(el).render({})
+                    var subdoc = pluto(el).render(obj)
                     el.replaceWith(subdoc)
                     el = subdoc
                 }
@@ -39,15 +50,15 @@
             // copy the list of generated elements from the template in order
             // to support removals
             this.children = [].map.call(doc.children, child => child)
-        }
 
-        remove() {
-            while (this.children.length > 0) {
-                this.children.pop().remove()
-            }
+            return doc
         }
 
         render(obj) {
+            if (!this._doc) {
+                this._doc = this.init(obj)
+            }
+
             for (var i = 0 ; i < this.tokens.length ; i += 1) {
                 var t = this.tokens[i]
                 var el = this.paths[t.path]
@@ -70,17 +81,16 @@
                     el.setAttribute(t.attr, v)
                 }
             }
+
+            return this._doc
         }
     }
 
     class RepeatRenderer {
-        constructor(tpl, doc) {
+        constructor(tpl) {
             this.tpl = tpl
             this.children = []
             this.repeat = tpl.repeat
-
-            this.placeholder = placeholder()
-            doc.appendChild(this.placeholder)
         }
 
         remove() {
@@ -89,7 +99,23 @@
             }
         }
 
+        init() {
+            var doc = new DocumentFragment()
+            doc.render = (obj) => (this.render(obj), doc)
+            doc.remove = () => this.remove()
+
+            this.placeholder = placeholder()
+            doc.appendChild(this.placeholder)
+
+            return doc
+        }
+
         render(obj) {
+            if (!this._doc) {
+                this._doc = this.init()
+            }
+
+            var item = obj.item
             var items = getPath(obj, this.repeat) || []
 
             // remove obsolete items
@@ -97,51 +123,67 @@
                 this.children.pop().remove()
             }
 
-            // create new items
-            while (this.children.length < items.length) {
-                var doc = new DocumentFragment()
-                this.children.push(new Renderer(this.tpl, doc))
-                this.placeholder.before(doc)
-            }
-
-            // re-render existing items
-            for (var i = 0; i < items.length; i += 1) {
+            // update existing items
+            for (var i = 0; i < this.children.length; i += 1) {
                 obj.item = items[i]
                 this.children[i].render(obj)
             }
+
+            // create new items
+            while (this.children.length < items.length) {
+                var i = this.children.length
+                obj.item = items[i]
+                var doc = new Renderer(this.tpl).render(obj)
+                this.children.push(doc)
+                this.placeholder.before(doc)
+            }
+
+            obj.item = item // restore previous item value.
+            return this._doc
         }
     }
 
     class CondRenderer {
-        constructor(tpl, doc) {
+        constructor(tpl) {
             this.tpl = tpl
             this.child = null
             this.cond = tpl.cond
+        }
+
+        init() {
+            var doc = new DocumentFragment()
+            doc.render = (obj) => (this.render(obj), doc)
 
             this.placeholder = placeholder()
             doc.appendChild(this.placeholder)
+            return doc
         }
 
         render(obj) {
+            if (!this._doc) {
+                this._doc = this.init()
+            }
+
             var cond = getPath(obj, this.cond) || false
             if (cond && !this.child) {
-                var doc = new DocumentFragment()
-                this.child = new Renderer(this.tpl, doc)
-                this.child.render(obj)
+                var doc = new Renderer(this.tpl).render(obj)
                 this.placeholder.before(doc)
+                this.child = doc
             } else if (!cond && this.child) {
                 this.child = this.child.remove()
             }
+
+            return this._doc
         }
     }
 
     class Template extends HTMLTemplateElement {
         render(obj) {
             this.compile()
-            var doc = new DocumentFragment()
             var renderer = new this.Renderer(this, doc)
-            doc.render = (obj) => (renderer.render(obj), doc)
-            return doc.render(obj)
+            return renderer.render(obj)
+            // doc.render = (obj) => (renderer.render(obj), doc)
+            // return doc.render(obj)
         }
 
         compile() {

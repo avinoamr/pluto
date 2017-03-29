@@ -8,7 +8,7 @@
     <template is='pluto-tpl' id='roi'>
         <h1>{{item}}</h1>
         <ul>
-            <template is='pluto-tpl' repeat={{items}}>
+            <template is='pluto-tpl' if={{show}} repeat={{items}}>
                 <li>{{item}}</li>
             </template>
         </ul>
@@ -26,16 +26,6 @@
     setTimeout(function() {
         doc.render({ show: true, item: 'final', items: ['four', 'five'] })
     }, 1000)
-
-    // function render() {
-    //     var data = { item: new Date().toISOString() }
-    //     var doc = renderer.render(data)
-    //     document.body.appendChild(doc)
-    //
-    // }
-    //
-    // render()
-    // setTimeout(render, 200)
     </script>
 </body>
 </html>
