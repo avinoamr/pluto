@@ -36,7 +36,7 @@
 
             // generate hard links from tokens to the generated elements in
             // order to avoid re-computing them on every render.
-            this.paths = this.tokens.reduce(function (paths, t) {
+            this.paths = this.tokens.reduce(function (paths, t, idx) {
                 var el = getPath(doc, t.path)
                 if (t.tpl) {
                     var subdoc = pluto(el).render(obj)
@@ -44,7 +44,7 @@
                     el = subdoc
                 }
 
-                return paths[t.path] = el, paths
+                return paths[idx] = { el }, paths
             }, {})
 
             // copy the list of generated elements from the template in order
@@ -61,7 +61,7 @@
 
             for (var i = 0 ; i < this.tokens.length ; i += 1) {
                 var t = this.tokens[i]
-                var el = this.paths[t.path]
+                var { el } = this.paths[i]
                 var v = getPath(obj, t.name)
 
                 // nested template
