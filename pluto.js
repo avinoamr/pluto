@@ -26,6 +26,12 @@
             this.children = [].map.call(doc.children, child => child)
         }
 
+        remove() {
+            while (this.children.length > 0) {
+                this.children.pop().remove()
+            }
+        }
+
         render(obj) {
             for (var i = 0 ; i < this.tokens.length ; i += 1) {
                 var t = this.tokens[i]
@@ -48,12 +54,84 @@
         }
     }
 
+    class RepeatRenderer {
+        constructor(tpl, doc) {
+            this.tpl = tpl
+            this.children = []
+            this.repeat = tpl.repeat
+
+            this.placeholder = placeholder()
+            doc.appendChild(this.placeholder)
+        }
+
+        remove() {
+            while (this.children.length > 0) {
+                this.children.pop().remove()
+            }
+        }
+
+        render(obj) {
+            var items = getPath(obj, this.repeat)
+
+            // remove obsolete items
+            while (this.children.length > items.length) {
+                this.children.pop().remove()
+            }
+
+            // create new items
+            while (this.children.length < items.length) {
+                var doc = new DocumentFragment()
+                this.children.push(new Renderer(this.tpl, doc))
+                this.placeholder.before(doc)
+            }
+
+            // re-render existing items
+            for (var i = 0; i < items.length; i += 1) {
+                obj.item = items[i]
+                this.children[i].render(obj)
+            }
+        }
+    }
+
+    class CondRenderer {
+        constructor(tpl, doc) {
+            this.tpl = tpl
+            this.child = null
+            this.cond = tpl.cond
+
+            this.placeholder = placeholder()
+            doc.appendChild(this.placeholder)
+        }
+
+        render(obj) {
+            var cond = getPath(obj, this.cond) || false
+
+            if (cond && !this.child) {
+                var doc = new DocumentFragment()
+                this.child = new Renderer(this.tpl, doc)
+                this.child.render(obj)
+                this.placeholder.before(doc)
+            } else if (!cond && this.child) {
+                this.child = this.child.remove()
+            }
+        }
+    }
+
     class Template extends HTMLTemplateElement {
         render(obj) {
             this.compile()
 
             var doc = new DocumentFragment()
-            var renderer = new Renderer(this, doc)
+
+            var renderer
+            if (this.repeat) {
+                renderer = new RepeatRenderer(this, doc)
+            } else if (this.cond) {
+                renderer = new CondRenderer(this, doc)
+            } else {
+                renderer = new Renderer(this, doc)
+            }
+
             doc.render = (obj) => (renderer.render(obj), doc)
             return doc.render(obj)
         }
@@ -97,7 +175,7 @@
 
             this.tokens = tokens
             this.repeat = tokenName(this.getAttribute('repeat'))
-            this.if = tokenName(this.getAttribute('if'))
+            this.cond = tokenName(this.getAttribute('if'))
         }
     }
 
