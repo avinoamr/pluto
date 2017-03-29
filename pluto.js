@@ -18,7 +18,14 @@
             // generate hard links from tokens to the generated elements in
             // order to avoid re-computing them on every render.
             this.paths = tpl.tokens.reduce(function (paths, t) {
-                return paths[t.path] = getPath(doc, t.path), paths
+                var el = getPath(doc, t.path)
+                if (t.tpl) {
+                    var subdoc = pluto(el).render({})
+                    el.replaceWith(subdoc)
+                    el = subdoc
+                }
+
+                return paths[t.path] = el, paths
             }, {})
 
             // copy the list of generated elements from the template in order
@@ -40,6 +47,7 @@
 
                 // nested template
                 if (t.tpl) {
+                    el.render(obj)
                     continue
                 }
 
@@ -71,7 +79,7 @@
         }
 
         render(obj) {
-            var items = getPath(obj, this.repeat)
+            var items = getPath(obj, this.repeat) || []
 
             // remove obsolete items
             while (this.children.length > items.length) {
@@ -105,7 +113,6 @@
 
         render(obj) {
             var cond = getPath(obj, this.cond) || false
-
             if (cond && !this.child) {
                 var doc = new DocumentFragment()
                 this.child = new Renderer(this.tpl, doc)
@@ -120,18 +127,8 @@
     class Template extends HTMLTemplateElement {
         render(obj) {
             this.compile()
-
             var doc = new DocumentFragment()
-
-            var renderer
-            if (this.repeat) {
-                renderer = new RepeatRenderer(this, doc)
-            } else if (this.cond) {
-                renderer = new CondRenderer(this, doc)
-            } else {
-                renderer = new Renderer(this, doc)
-            }
-
+            var renderer = new this.Renderer(this, doc)
             doc.render = (obj) => (renderer.render(obj), doc)
             return doc.render(obj)
         }
@@ -176,6 +173,14 @@
             this.tokens = tokens
             this.repeat = tokenName(this.getAttribute('repeat'))
             this.cond = tokenName(this.getAttribute('if'))
+
+            if (this.repeat) {
+                this.Renderer = RepeatRenderer
+            } else if (this.cond) {
+                this.Renderer = CondRenderer
+            } else {
+                this.Renderer = Renderer
+            }
         }
     }
 
@@ -186,9 +191,6 @@
     function placeholder() {
         var el = document.createElement('template')
         el.setAttribute('is', 'pluto-placeholder')
-        el.replaceWith = function(el) {
-            return this.parentNode.replaceChild(el, this)
-        }
         return el
     }
 

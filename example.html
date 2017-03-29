@@ -5,8 +5,13 @@
 <body>
     <script src="pluto.js" charset="utf-8"></script>
 
-    <template is='pluto-tpl' id='roi' if={{show}}>
+    <template is='pluto-tpl' id='roi'>
         <h1>{{item}}</h1>
+        <ul>
+            <template is='pluto-tpl' repeat={{items}}>
+                <li>{{item}}</li>
+            </template>
+        </ul>
     </template>
 
     <script>
