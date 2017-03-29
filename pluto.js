@@ -65,6 +65,7 @@
                     el.removeAttribute(t.attr)
                 } else if (typeof v === 'function' && t.attr.startsWith('on')) {
                     el[t.attr] = v // event listener
+                    el.removeAttribute(t.attr) // hide attribute in DOM
                 } else {
                     el.setAttribute(t.attr, v)
                 }
