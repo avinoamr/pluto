@@ -63,6 +63,8 @@
                     el.textContent = v || ''
                 } else if (v === undefined) {
                     el.removeAttribute(t.attr)
+                } else if (typeof v === 'function' && t.attr.startsWith('on')) {
+                    el[t.attr] = v // event listener
                 } else {
                     el.setAttribute(t.attr, v)
                 }
@@ -149,14 +151,14 @@
 
                 // inner content token
                 var name = tokenName(el.textContent || '')
-                if (name) {
+                if (name !== null) {
                     tokens.push({ name, path })
                 }
 
                 // attributes
                 [].forEach.call(el.attributes || [], function(attr) {
                     var name = tokenName(attr.value)
-                    if (name) {
+                    if (name !== null) {
                         tokens.push({ name, attr: attr.name, path })
                     }
                 })
@@ -206,7 +208,7 @@
     }
 
     function maybeUpgrade(el) {
-        if (el.matches('template[is="pluto-tpl"]')) {
+        if (el.matches('template')) {
             pluto(el) // auto-upgrade nested templates.
         }
     }
@@ -241,7 +243,7 @@
 
     function getPath(obj, path) {
         if (!path || path.length === 0) {
-            return obj
+            return undefined
         }
 
         var path = Array.isArray(path) ? path : path.split('.')
