@@ -15,7 +15,7 @@
     </template>
 
     <script>
-    var tpl = pluto(document.querySelector('#roi'))
+    var tpl = pluto('#roi')
     var doc = tpl.render({ show: true, item: 'hello', items: ['one', 'two'] })
     document.body.appendChild(doc)
 

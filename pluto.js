@@ -4,6 +4,10 @@
     // upgrade an element
     // NOTE this will be unnecessary with customElements
     function pluto(el) {
+        if (typeof el === 'string') {
+            el = document.querySelector(el)
+        }
+        
         return el instanceof Template
             ? el
             : Object.setPrototypeOf(el, Template.prototype)
@@ -174,10 +178,10 @@
             this.repeat = tokenName(this.getAttribute('repeat'))
             this.cond = tokenName(this.getAttribute('if'))
 
-            if (this.repeat) {
-                this.Renderer = RepeatRenderer
-            } else if (this.cond) {
+            if (this.cond) {
                 this.Renderer = CondRenderer
+            } else if (this.repeat) {
+                this.Renderer = RepeatRenderer
             } else {
                 this.Renderer = Renderer
             }
@@ -185,6 +189,9 @@
     }
 
     pluto.Template = Template
+    pluto.Renderer = Renderer
+    pluto.CondRenderer = CondRenderer
+    pluto.RepeatRenderer = RepeatRenderer
 
     // -- HELPER FUNCTIONS
 
