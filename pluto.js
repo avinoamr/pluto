@@ -180,10 +180,7 @@
     class Template extends HTMLTemplateElement {
         render(obj) {
             this.compile()
-            var renderer = new this.Renderer(this, doc)
-            return renderer.render(obj)
-            // doc.render = (obj) => (renderer.render(obj), doc)
-            // return doc.render(obj)
+            return new this.Renderer(this).render(obj)
         }
 
         compile() {
