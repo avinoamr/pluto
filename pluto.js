@@ -5,10 +5,14 @@
     // NOTE this will be unnecessary with customElements
     function pluto(el) {
         if (typeof el === 'string') {
-            el = document.querySelector(el)
+            // support HTML-imported selections
+            var doc = document._currentScript // used by pollyfills
+                || document.currentScript // native.
+                || document // not an import.
+            el = (doc.ownerDocument || doc).querySelector(el)
         }
-        
-        return el instanceof Template
+
+        return !el || el instanceof Template
             ? el
             : Object.setPrototypeOf(el, Template.prototype)
     }
