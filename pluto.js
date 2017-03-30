@@ -309,18 +309,32 @@
         return obj || {}
     }
 
+    var isIdentifier = /^[$A-Z_][0-9A-Z_$]*$/i;
+
     function tokenName(s) {
-        return s
+        var name = s
             && s[0] === '{'
             && s[1] === '{'
             && s[s.length - 1] === '}'
             && s[s.length - 2] === '}'
-            ? s.slice(2, -2) : null
+            ? s.slice(2, -2).trim() : null
+
+        // normal identifier
+        if (!name || name.match(isIdentifier)) {
+            return name
+        }
+
+        // it's probably a javascript expression
+        return { expr: name }
     }
 
     function getPath(obj, path) {
         if (!path || path.length === 0) {
             return undefined
+        }
+
+        if (path.expr) {
+            return pluto._evalExpr.call({ obj, expr: path.expr })
         }
 
         var path = Array.isArray(path) ? path : path.split('.')
@@ -330,4 +344,25 @@
         }
         return v
     }
-})()
+})();
+
+(function() {
+    // placed here in order to have its own scope clear of any of the pluto
+    // local variables.
+    pluto._evalExpr = function() {
+        // build all of the local variables
+        // TODO consider evaluating all of the template expressions once to
+        // prevent repeated generation of these local variables
+        eval(Object.keys(this.obj).map(function (k) {
+            return 'var ' + k + ' = this.obj.' + k
+        }).join('; '))
+
+        // execute the expression
+        try {
+            return eval(this.expr)
+        } catch (err) {
+            console.warn(err.message)
+            return undefined
+        }
+    }
+})();
