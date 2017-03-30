@@ -97,7 +97,6 @@
                     el.removeAttribute(t.attr)
                 } else if (typeof v === 'function' && t.attr.startsWith('on')) {
                     el[t.attr] = v // event listener
-                    el.removeAttribute(t.attr) // hide attribute in DOM
                 } else if (typeof v !== 'string' && observed) {
                     el.attributeChangedCallback(t.attr, null, v, null)
                 } else {
@@ -309,7 +308,7 @@
         return obj || {}
     }
 
-    var isIdentifier = /^[$A-Z_][0-9A-Z_$]*$/i;
+    var isIdentifier = /^[$A-Z_][0-9A-Z_$\.]*$/i;
 
     function tokenName(s) {
         var name = s
@@ -361,7 +360,9 @@
         try {
             return eval(this.expr)
         } catch (err) {
-            console.warn(err.message)
+            if (!(err instanceof ReferenceError)) {
+                console.warn(err)
+            }
             return undefined
         }
     }
