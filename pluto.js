@@ -31,6 +31,19 @@
 
         init(obj) {
             var doc = this.tpl.cloneNode(true).content
+
+            // remove attributes or tokens before importing in order to hide
+            // the placeholder tokens from the constructor of custom elements.
+            this.tokens.forEach(function(t) {
+                var el = getPath(doc, t.path)
+                if (!t.attr) {
+                    el.textContent = ''
+                } else {
+                    el.removeAttribute(t.attr)
+                }
+            })
+
+            doc = document.importNode(doc, true) // this will upgrade elements
             doc.render = (obj) => (this.render(obj), doc)
             doc.remove = () => this.remove()
 
@@ -44,7 +57,15 @@
                     el = subdoc
                 }
 
-                return paths[idx] = { el }, paths
+                paths[idx] = { el }
+
+                // marke observed attributes
+                if (t.attr && el.attributeChangedCallback) {
+                    var observed = el.constructor.observedAttributes || [];
+                    paths[idx].observed = observed.indexOf(t.attr) !== -1
+                }
+
+                return paths
             }, {})
 
             // copy the list of generated elements from the template in order
@@ -61,7 +82,7 @@
 
             for (var i = 0 ; i < this.tokens.length ; i += 1) {
                 var t = this.tokens[i]
-                var { el } = this.paths[i]
+                var { el, observed } = this.paths[i]
                 var v = getPath(obj, t.name)
 
                 // nested template
@@ -77,7 +98,7 @@
                 } else if (typeof v === 'function' && t.attr.startsWith('on')) {
                     el[t.attr] = v // event listener
                     el.removeAttribute(t.attr) // hide attribute in DOM
-                } else if (typeof v !== 'string' && el.attributeChangedCallback) {
+                } else if (typeof v !== 'string' && observed) {
                     el.attributeChangedCallback(t.attr, null, v, null)
                 } else {
                     el.setAttribute(t.attr, v)
