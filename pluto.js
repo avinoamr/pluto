@@ -101,6 +101,20 @@
                 } else if (typeof v !== 'string' && observed) {
                     el.attributeChangedCallback(t.attr, null, v, null)
                 } else {
+                    if (t.attr === 'class' && typeof v === 'object') {
+                        if (Array.isArray(v)) {
+                            return v.join(' ')
+                        }
+
+                        v = Object.keys(v).filter(function (k) {
+                            return v[k]
+                        }).join(' ')
+                    } else if (t.attr === 'style' && typeof v === 'object') {
+                        v = Object.keys(v).map(function(k) {
+                            return k + ': ' + v
+                        }).join('; ')
+                    }
+
                     el.setAttribute(t.attr, v)
                 }
             }
