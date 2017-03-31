@@ -82,7 +82,7 @@
 
             for (var i = 0 ; i < this.tokens.length ; i += 1) {
                 var t = this.tokens[i]
-                var { el, observed } = this.paths[i]
+                var { el, observed, listener } = this.paths[i]
                 var v = getPath(obj, t.name)
 
                 // nested template
@@ -96,7 +96,14 @@
                 } else if (v === undefined) {
                     el.removeAttribute(t.attr)
                 } else if (typeof v === 'function' && t.attr.startsWith('on')) {
-                    el[t.attr] = v // event listener
+                    // set the event listener if it has changed
+                    var evName = t.attr.slice(2)
+                    if (listener) {
+                        el.removeEventListener(evName, listener)
+                    }
+
+                    el.addEventListener(evName, v)
+                    this.paths[i].listener = v // remember it for next render
                 } else if (typeof v !== 'string' && observed) {
                     el.attributeChangedCallback(t.attr, null, v, null)
                 } else {

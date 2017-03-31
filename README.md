@@ -103,10 +103,39 @@ compilation time instead of render time:
     - Use this function in-place of the expression on the token, and invoke it
     with the render input upon render.
 
-
-
-
-
-
-
 ## Binding event listeners
+
+Binding events is tricky, because we can't just set them as properties. For
+example: `el.onclick = function() {}` will work but custom events like wouldn't
+like `el.onaddtab = function() {}`.
+
+Polymer solves it by a convention of starting these attribute names with `on-`,
+so their template engine will identify the event name and will add normal
+event listeners.
+
+React solves it by not using events at all. You just pass the properties as any
+other property to the inner element, which, instead of firing events, will just
+invoke the function manually. So there's no event propagation.
+
+Another issue with event listeners is that as they're function they can be
+unbound, and thus yield weird/unexpected results and errors.
+
+React simply forces you to bind your events before rendering. So you must have
+something like `this.fn = this.fn.bind(this)` for any function you pass as an
+event handler. There's a risk of binding the function on every render, because
+it will result in a re-render of the element as it has changed.
+
+Polymer uses a simpler approach. You specific a literal function name, instead
+of a token that links to an actual function. They then just look-up this
+function on the rendered element, with the element as it's bound context `this`.
+
+Out of all of these - I think I prefer a mix of both options:
+    - Using real events, with propagations is more inline with how the DOM
+    works natively.
+    - Using string literals as references to functions makes little sense in the
+    context of a generic templating engine as we don't necessarily have a
+    root custom-element that's guaranteed to contain these functions.
+
+So in the final design, you mark event listeners with the `on-` prefix, but you
+can pass in actual functions. We'll then bind these functions as event
+listeners. 
