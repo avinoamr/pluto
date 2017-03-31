@@ -220,6 +220,11 @@
         }
 
         compile() {
+            if (this._compiled === this.outerHTML) {
+                return // already compiled.
+            }
+            this._compiled = this.outerHTML
+
             var tokens = []
             var elements = [{ el: this.content, path: [] }]
             while (elements.length > 0) {
@@ -324,7 +329,42 @@
         }
 
         // it's probably a javascript expression
-        return { expr: name }
+        return { expr: evalExpr(name) }
+    }
+
+    function evalExpr(expr) {
+        var re = /[$A-Z_][0-9A-Z_$]*/ig
+        var whitespace = ' \n\r\t'
+        var allowed = '([;'
+
+        // generate the list of identifiers found in the code. We first match
+        // for the valid identifier, and then check the previous non-whitespace
+        // character preceeding the identifier to verify that it's not a string
+        // or nested element.
+        var refs = []
+        var match
+        while (match = re.exec(expr)) {
+            var idx = match.index - 1
+            var lastChar;
+            while (!lastChar && idx > -1) {
+                if (whitespace.indexOf(expr[idx]) === -1) {
+                    lastChar = expr[idx]
+                }
+                idx -= 1
+            }
+
+            if (lastChar === undefined || allowed.indexOf(lastChar) !== -1) {
+                refs.push(match[0])
+            }
+        }
+
+        // evaluate a function that sets all of the references found as local
+        // variables and then executes the original expression.
+        var code = refs.map(function (ref) {
+            return 'var ' + ref + ' = this.' + ref
+        }).join(';') + ' ; return ' + expr
+
+        return pluto._eval('function _expr() {' + code + '}; _expr')
     }
 
     function getPath(obj, path) {
@@ -333,7 +373,7 @@
         }
 
         if (path.expr) {
-            return pluto._evalExpr.call({ obj, expr: path.expr })
+            return path.expr.call(obj)
         }
 
         var path = Array.isArray(path) ? path : path.split('.')
@@ -346,24 +386,10 @@
 })();
 
 (function() {
+
     // placed here in order to have its own scope clear of any of the pluto
     // local variables.
-    pluto._evalExpr = function() {
-        // build all of the local variables
-        // TODO consider evaluating all of the template expressions once to
-        // prevent repeated generation of these local variables
-        eval(Object.keys(this.obj).map(function (k) {
-            return 'var ' + k + ' = this.obj.' + k
-        }).join('; '))
-
-        // execute the expression
-        try {
-            return eval(this.expr)
-        } catch (err) {
-            if (!(err instanceof ReferenceError)) {
-                console.warn(err)
-            }
-            return undefined
-        }
+    pluto._eval = function(code) {
+        return eval(code)
     }
 })();

@@ -59,3 +59,54 @@ For the former, the following approaches exist:
     whatever they want with it.
     - Fire `attribute-changed` event on the custom element, allowing them to
     handle it however they'd like.
+    - Call property setters on the custom-element (if they exist for the
+    attribute name)
+    - Populate some internal `.props` object and firing a `props-changed`
+    event, to solve the problem that these non-string attributes aren't
+    accessible after the callback was called.
+
+One last after-thought: these other libraries benefit from the fact that the
+also control the design of the custom-element or component. As a pure template-
+rendering library, pluto doesn't. So perhaps it's best to just provide the
+notations that will allow the user to define when they want to set a property,
+and when an attribute - a la Polymer `$=`
+
+## Expressions
+
+Some use-cases involve passing in a complex or computed attribute to the
+rendered elements. Such as `active={{ mode === 'one'}}`. The naive approach is
+to use `eval()` to evaluate these expressions, but this has two problems:
+
+    - `eval` is __very__ slow. Especially when there are several such
+    expressions and frequent re-renders.
+    - transforming the properties of the input object into local variables is
+    tricky and usually requires another `eval()` that sets the local variables,
+    which further adds to the slowness. See alternative below.
+
+Polymer solves it by not allowing expressions. Instead, they just support
+function calls that doesn't require any evaluation beyond just calling the
+function.
+
+React supports it because JSX allows arbitrary javascript expressions to be
+evaluated native before the rendering, thus passing in the computed value in the
+first place.
+
+One alternative is kinda tricky, and moves most/all of the `eval()` to template
+compilation time instead of render time:
+
+    - Extract the list of identifiers referenced from the expression using
+    regexp.
+    Example: `['mode']`
+    - Wrap the expression with a function that receives an object argument and
+    fetches these idenitifers into local variables:
+    Example: `function(obj) { var mode = obj.mode; return mode === 'select' }`.
+    - Use this function in-place of the expression on the token, and invoke it
+    with the render input upon render.
+
+
+
+
+
+
+
+## Binding event listeners
