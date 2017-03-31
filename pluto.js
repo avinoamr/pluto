@@ -236,18 +236,18 @@
                 var { el, path } = elements.shift()
 
                 // inner content token
-                var name = tokenName(el.textContent || '')
+                var name = this.tokenName(el.textContent || '')
                 if (name !== null) {
                     tokens.push({ name, path })
                 }
 
                 // attributes
                 [].forEach.call(el.attributes || [], function(attr) {
-                    var name = tokenName(attr.value)
+                    var name = this.tokenName(attr.value)
                     if (name !== null) {
                         tokens.push({ name, attr: attr.name, path })
                     }
-                })
+                }, this)
 
                 if (el instanceof Template) {
                     tokens.push({ path, tpl: true })
@@ -267,8 +267,8 @@
             }
 
             this.tokens = tokens
-            this.repeat = tokenName(this.getAttribute('repeat'))
-            this.cond = tokenName(this.getAttribute('if'))
+            this.repeat = this.tokenName(this.getAttribute('repeat'))
+            this.cond = this.tokenName(this.getAttribute('if'))
 
             if (this.cond) {
                 this.Renderer = CondRenderer
@@ -276,6 +276,62 @@
                 this.Renderer = RepeatRenderer
             } else {
                 this.Renderer = Renderer
+            }
+        }
+
+        tokenName(s) {
+            var name = s
+                && s[0] === '{'
+                && s[1] === '{'
+                && s[s.length - 1] === '}'
+                && s[s.length - 2] === '}'
+                ? s.slice(2, -2).trim() : null
+
+            // normal identifier
+            if (!name || name.match(isIdentifier)) {
+                return name
+            }
+
+            // it's probably a javascript expression
+            return { expr: name, fn: this.evalExpr(name) }
+        }
+
+        evalExpr(expr) {
+            var re = /[$A-Z_][0-9A-Z_$]*/ig
+            var whitespace = ' \n\r\t'
+            var disallowed = '\'\".'
+
+            // generate the list of identifiers found in the code. We first match
+            // for the valid identifier, and then check the previous non-whitespace
+            // character preceeding the identifier to verify that it's not a string
+            // or nested element.
+            var refs = {}
+            var match
+            while (match = re.exec(expr)) {
+                var lastChar;
+                do {
+                    match.index -= 1
+                    if (whitespace.indexOf(expr[match.index]) === -1) {
+                        lastChar = expr[match.index]
+                    }
+                } while (match.index > -1 && !lastChar)
+
+                if (disallowed.indexOf(lastChar) === -1) {
+                    refs[match[0]] = true
+                }
+            }
+
+            // evaluate a function that sets all of the references found as local
+            // variables and then executes the original expression.
+            var code = Object.keys(refs).map(function (ref) {
+                return 'var ' + ref + ' = this.' + ref
+            }).join(';') + ' ; return ' + expr
+
+            try {
+                return pluto._eval('function _expr() {' + code + '}; _expr')
+            } catch(err) {
+                console.warn(err.message, 'in: {{', expr, '}}')
+                return function () {}
             }
         }
     }
@@ -320,62 +376,6 @@
 
     var isIdentifier = /^[$A-Z_][0-9A-Z_$\.]*$/i;
 
-    function tokenName(s) {
-        var name = s
-            && s[0] === '{'
-            && s[1] === '{'
-            && s[s.length - 1] === '}'
-            && s[s.length - 2] === '}'
-            ? s.slice(2, -2).trim() : null
-
-        // normal identifier
-        if (!name || name.match(isIdentifier)) {
-            return name
-        }
-
-        // it's probably a javascript expression
-        return { expr: evalExpr(name) }
-    }
-
-    function evalExpr(expr) {
-        var re = /[$A-Z_][0-9A-Z_$]*/ig
-        var whitespace = ' \n\r\t'
-        var disallowed = '\'\".'
-
-        // generate the list of identifiers found in the code. We first match
-        // for the valid identifier, and then check the previous non-whitespace
-        // character preceeding the identifier to verify that it's not a string
-        // or nested element.
-        var refs = {}
-        var match
-        while (match = re.exec(expr)) {
-            var lastChar;
-            do {
-                match.index -= 1
-                if (whitespace.indexOf(expr[match.index]) === -1) {
-                    lastChar = expr[match.index]
-                }
-            } while (match.index > -1 && !lastChar)
-
-            if (disallowed.indexOf(lastChar) === -1) {
-                refs[match[0]] = true
-            }
-        }
-
-        // evaluate a function that sets all of the references found as local
-        // variables and then executes the original expression.
-        var code = Object.keys(refs).map(function (ref) {
-            return 'var ' + ref + ' = this.' + ref
-        }).join(';') + ' ; return ' + expr
-
-        try {
-            return pluto._eval('function _expr() {' + code + '}; _expr')
-        } catch(err) {
-            console.warn(err.message, 'in:', expr)
-            return function () {}
-        }
-    }
-
     function getPath(obj, path) {
         if (!path || path.length === 0) {
             return undefined
@@ -383,12 +383,11 @@
 
         if (path.expr) {
             try {
-                return path.expr.call(obj)
+                return path.fn.call(obj)
             } catch (err) {
-                console.warn('Error in', path.expr)
-                throw err
+                console.warn(err.message, 'in: ', path.expr)
+                return undefined
             }
-
         }
 
         var path = Array.isArray(path) ? path : path.split('.')
