@@ -9,7 +9,7 @@
         <h1>{{item.toUpperCase()}}</h1>
         <ul>
             <template is='pluto-tpl' repeat={{items}}>
-                <li>{{item}}</li>
+                <li id="{{ {item: 'hello'} }}">{{item}}</li>
             </template>
         </ul>
     </template>

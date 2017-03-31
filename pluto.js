@@ -114,7 +114,12 @@
                         }).join('; ')
                     }
 
-                    el.setAttribute(t.attr, v)
+                    v = v.toString()
+                    if (v === '[object Object]') {
+                        el.removeAttribute(t.attr)
+                    } else {
+                        el.setAttribute(t.attr, v)
+                    }
                 }
             }
 
@@ -335,36 +340,40 @@
     function evalExpr(expr) {
         var re = /[$A-Z_][0-9A-Z_$]*/ig
         var whitespace = ' \n\r\t'
-        var allowed = '([;'
+        var disallowed = '\'\".'
 
         // generate the list of identifiers found in the code. We first match
         // for the valid identifier, and then check the previous non-whitespace
         // character preceeding the identifier to verify that it's not a string
         // or nested element.
-        var refs = []
+        var refs = {}
         var match
         while (match = re.exec(expr)) {
-            var idx = match.index - 1
             var lastChar;
-            while (!lastChar && idx > -1) {
-                if (whitespace.indexOf(expr[idx]) === -1) {
-                    lastChar = expr[idx]
+            do {
+                match.index -= 1
+                if (whitespace.indexOf(expr[match.index]) === -1) {
+                    lastChar = expr[match.index]
                 }
-                idx -= 1
-            }
+            } while (match.index > -1 && !lastChar)
 
-            if (lastChar === undefined || allowed.indexOf(lastChar) !== -1) {
-                refs.push(match[0])
+            if (disallowed.indexOf(lastChar) === -1) {
+                refs[match[0]] = true
             }
         }
 
         // evaluate a function that sets all of the references found as local
         // variables and then executes the original expression.
-        var code = refs.map(function (ref) {
+        var code = Object.keys(refs).map(function (ref) {
             return 'var ' + ref + ' = this.' + ref
         }).join(';') + ' ; return ' + expr
 
-        return pluto._eval('function _expr() {' + code + '}; _expr')
+        try {
+            return pluto._eval('function _expr() {' + code + '}; _expr')
+        } catch(err) {
+            console.warn(err.message, 'in:', expr)
+            return function () {}
+        }
     }
 
     function getPath(obj, path) {
@@ -373,7 +382,13 @@
         }
 
         if (path.expr) {
-            return path.expr.call(obj)
+            try {
+                return path.expr.call(obj)
+            } catch (err) {
+                console.warn('Error in', path.expr)
+                throw err
+            }
+
         }
 
         var path = Array.isArray(path) ? path : path.split('.')
