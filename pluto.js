@@ -102,6 +102,7 @@
                         el.removeEventListener(evName, listener)
                     }
 
+                    v = v._bound || v
                     el.addEventListener(evName, v)
                     this.paths[i].listener = v // remember it for next render
                 } else if (typeof v !== 'string' && observed) {
@@ -405,9 +406,17 @@
 
         var path = Array.isArray(path) ? path : path.split('.')
         var v = obj
+        var bound = null
         for (var i = 0; v !== undefined && i < path.length; i += 1) {
+            bound = v
             v = v[path[i]]
         }
+
+        if (typeof v === 'function') {
+            // may cause event listeners to re-register un-necessarily
+            v._bound = v.bind(bound)
+        }
+
         return v
     }
 })();
