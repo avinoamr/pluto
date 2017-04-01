@@ -71,6 +71,16 @@ rendering library, pluto doesn't. So perhaps it's best to just provide the
 notations that will allow the user to define when they want to set a property,
 and when an attribute - a la Polymer `$=`
 
+Note that we can also override the `el.attributes` object when a non-string is
+set by (1) `el.attributes.obj = obj` or (2) overriding the `getNamedItem()`
+function to return a different type of attribute that returns the actual value.
+
+Another thought - instead of using `$=` or any other special notation, we can
+piggyback on attribute namespaces to mark the difference between attributes and
+properties. Since properties don't have a namespace, we can use something like
+`prop:name={{value}}` instead of `name={{value}}` to indicate a property. The
+same can be applied to event listeners with `on:click={{onClick}}`.
+
 ## Expressions
 
 Some use-cases involve passing in a complex or computed attribute to the
@@ -138,4 +148,4 @@ Out of all of these - I think I prefer a mix of both options:
 
 So in the final design, you mark event listeners with the `on-` prefix, but you
 can pass in actual functions. We'll then bind these functions as event
-listeners. 
+listeners.

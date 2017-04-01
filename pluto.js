@@ -324,6 +324,10 @@
                 } while (match.index > -1 && !lastChar)
 
                 if (disallowed.indexOf(lastChar) === -1) {
+                    if (match[0] === 'this') {
+                        continue // allow access to `this` for binding
+                    }
+
                     refs[match[0]] = true
                 }
             }
