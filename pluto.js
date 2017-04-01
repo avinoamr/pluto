@@ -396,7 +396,7 @@
             try {
                 return path.fn.call(obj)
             } catch (err) {
-                console.warn(err.message, 'in: ', path.expr)
+                console.warn(err.message, 'in:', path.expr)
                 return undefined
             }
         }
