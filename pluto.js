@@ -87,7 +87,6 @@
 
                 // nested template
                 if (t.tpl) {
-                    console.log('SUB TPL', this.tpl)
                     el.render(obj)
                     continue
                 }
