@@ -8,8 +8,8 @@
     <template is='pluto-tpl' id='roi'>
         <h1>{{item.toUpperCase()}}</h1>
         <ul>
-            <template is='pluto-tpl' repeat={{items}}>
-                <li id="{{ {item: 'hello'} }}">{{item}}</li>
+            <template is='pluto-tpl' if={{show}}>
+                <li>{{item}}</li>
             </template>
         </ul>
     </template>
@@ -20,7 +20,7 @@
     document.body.appendChild(doc)
 
     setTimeout(function() {
-        doc.render({ item: 'cookie', items: ['three'] })
+        doc.render({ show: true, item: 'cookie', items: ['three'] })
     }, 500)
 
     setTimeout(function() {

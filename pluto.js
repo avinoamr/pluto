@@ -87,6 +87,7 @@
 
                 // nested template
                 if (t.tpl) {
+                    console.log('SUB TPL', this.tpl)
                     el.render(obj)
                     continue
                 }
@@ -213,7 +214,9 @@
             }
 
             var cond = getPath(obj, this.cond) || false
-            if (cond && !this.child) {
+            if (cond && this.child) {
+                this.child.render(obj)
+            } else if (cond && !this.child) {
                 var doc = new Renderer(this.tpl).render(obj)
                 this.placeholder.before(doc)
                 this.child = doc

@@ -81,6 +81,28 @@ properties. Since properties don't have a namespace, we can use something like
 `prop:name={{value}}` instead of `name={{value}}` to indicate a property. The
 same can be applied to event listeners with `on:click={{onClick}}`.
 
+Consider the following relationships between properties and attributes:
+
+ATTR            PROP
+--------------------
+class           className
+style           style
+id              id
+src             src
+href            href
+tabindex        tabindex
+...
+(most of the global attributes)
+
+
+This means that - in most cases we can decide that we keep attributes and local
+properties in async. Changing one may affect the other. This shifts us back to
+the React paradigm where everything is a property (maybe with the exception of
+`class` that can be mapped to `className`)
+
+
+
+
 ## Expressions
 
 Some use-cases involve passing in a complex or computed attribute to the
