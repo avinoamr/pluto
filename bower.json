@@ -1,0 +1,24 @@
+{
+  "name": "pluto",
+  "main": "pluto.js",
+  "homepage": "https://github.com/avinoamr/pluto",
+  "authors": [
+    "Roi Avinoam <avinoamr@gmail.com>"
+  ],
+  "description": "HTML <template> Rendering",
+  "keywords": [
+    "template",
+    "render",
+    "attributes",
+    "binding",
+    "webcomponents"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}
