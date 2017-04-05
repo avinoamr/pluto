@@ -212,23 +212,30 @@
                     continue
                 }
 
+                // handle flat text
                 if (!t.attr) {
                     el.textContent = v || ''
-                } else if (typeof v === 'function' && t.attr.startsWith('on')) {
-                    // set the event listener if it has changed
-                    var evName = t.attr.slice(2)
-                    if (evName[0] === '-') { // "on-"
-                        evName = evName.slice(1)
-                    }
+                    continue
+                }
 
+                // event handlers
+                if (t.attr.startsWith('on-')) {
+                    var evName = t.attr.slice(3)
                     if (listener) {
                         el.removeEventListener(evName, listener)
                     }
 
-                    v = v._bound || v
-                    el.addEventListener(evName, v)
-                    this.paths[i].listener = v // remember it for next render
-                } else if (v === undefined) {
+                    if (typeof v === 'function') {
+                        v = v._bound || v
+                        el.addEventListener(evName, v)
+                        this.paths[i].listener = v // remember it for next render
+                    }
+
+                    continue
+                }
+
+                // set attributes
+                if (v === undefined) {
                     el.removeAttribute(t.attr)
                 } else if (typeof v !== 'string' && observed) {
                     el.attributeChangedCallback(t.attr, null, v, null)
