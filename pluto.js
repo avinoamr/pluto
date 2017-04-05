@@ -91,6 +91,7 @@
 
         tokenName(s) {
             var name = s
+                && ( s = s.trim() )
                 && s[0] === '{'
                 && s[1] === '{'
                 && s[s.length - 1] === '}'

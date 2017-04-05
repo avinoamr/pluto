@@ -6,7 +6,8 @@
     <script src="pluto.js" charset="utf-8"></script>
 
     <template is='pluto-tpl' id='roi'>
-        <h1>{{item.toUpperCase()}}</h1>
+        {{item.toUpperCase()}}
+
         <ul>
             <template is='pluto-tpl' repeat={{items}}>
                 <li>{{item}}</li>
