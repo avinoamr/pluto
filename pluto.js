@@ -19,16 +19,11 @@
 
     class Template extends HTMLTemplateElement {
         render(obj) {
-            this.compile()
-            return new this.Renderer(this).render(obj)
+            var compiled = this.compile()
+            return new compiled.Renderer(compiled).render(obj)
         }
 
         compile() {
-            if (this._compiled === this.outerHTML) {
-                return // already compiled.
-            }
-            this._compiled = this.outerHTML
-
             var tokens = []
             var elements = [{ el: this.content, path: [] }]
             while (elements.length > 0) {
@@ -69,10 +64,9 @@
 
             // remove attributes or tokens before rendering in order to hide
             // the placeholder tokens from the constructor of custom elements.
-            this.clone = this.cloneNode(true)
+            var clone = this.cloneNode(true)
             tokens.forEach(function(t) {
-                var el = getPath(this.clone.content, t.path)
-
+                var el = getPath(clone.content, t.path)
                 if (!t.attr) {
                     el.textContent = ''
                 } else {
@@ -80,17 +74,19 @@
                 }
             }, this)
 
-            this.tokens = tokens
-            this.repeat = this.tokenName(this.getAttribute('repeat'))
-            this.cond = this.tokenName(this.getAttribute('if'))
+            clone.tokens = tokens
+            clone.repeat = this.tokenName(this.getAttribute('repeat'))
+            clone.cond = this.tokenName(this.getAttribute('if'))
 
-            if (this.cond) {
-                this.Renderer = CondRenderer
-            } else if (this.repeat) {
-                this.Renderer = RepeatRenderer
+            if (clone.cond) {
+                clone.Renderer = CondRenderer
+            } else if (clone.repeat) {
+                clone.Renderer = RepeatRenderer
             } else {
-                this.Renderer = Renderer
+                clone.Renderer = Renderer
             }
+
+            return clone
         }
 
         tokenName(s) {
@@ -370,7 +366,8 @@
     }
 
     function maybeUpgrade(el) {
-        if (el.nodeName !== '#text' && el.matches('template')) {
+        // don't match #text, #comment, etc.
+        if (el.nodeName[0] !== '#' && el.matches('template')) {
             pluto(el) // auto-upgrade nested templates.
         }
     }
