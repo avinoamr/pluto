@@ -67,6 +67,19 @@
                 })
             }
 
+            // remove attributes or tokens before rendering in order to hide
+            // the placeholder tokens from the constructor of custom elements.
+            this.clone = this.cloneNode(true)
+            tokens.forEach(function(t) {
+                var el = getPath(this.clone.content, t.path)
+
+                if (!t.attr) {
+                    el.textContent = ''
+                } else {
+                    el.removeAttribute(t.attr)
+                }
+            }, this)
+
             this.tokens = tokens
             this.repeat = this.tokenName(this.getAttribute('repeat'))
             this.cond = this.tokenName(this.getAttribute('if'))
@@ -154,21 +167,7 @@
         }
 
         init(obj) {
-            var doc = this.tpl.cloneNode(true).content
-
-            // remove attributes or tokens before importing in order to hide
-            // the placeholder tokens from the constructor of custom elements.
-            this.tokens.forEach(function(t) {
-                var el = getPath(doc, t.path)
-
-                if (!t.attr) {
-                    el.textContent = ''
-                } else {
-                    el.removeAttribute(t.attr)
-                }
-            })
-
-            doc = document.importNode(doc, true) // this will upgrade elements
+            var doc = document.importNode(this.tpl.content, true)
             doc.render = (obj) => (this.render(obj), doc)
             doc.remove = () => this.remove()
 
@@ -184,7 +183,7 @@
 
                 paths[idx] = { el }
 
-                // marke observed attributes
+                // mark observed attributes
                 if (t.attr && el.attributeChangedCallback) {
                     var observed = el.constructor.observedAttributes || [];
                     paths[idx].observed = observed.indexOf(t.attr) !== -1
@@ -195,7 +194,7 @@
 
             // copy the list of generated elements from the template in order
             // to support removals
-            this.children = [].map.call(doc.children, child => child)
+            this.children = [].map.call(doc.childNodes, child => child)
 
             return doc
         }
