@@ -35,9 +35,11 @@
                 var { el, path } = elements.shift()
 
                 // inner content token
-                var name = this.tokenName(el.textContent || '')
-                if (name !== null) {
-                    tokens.push({ name, path })
+                if (el.nodeName === '#text') {
+                    var name = this.tokenName(el.textContent || '')
+                    if (name !== null) {
+                        tokens.push({ name, path })
+                    }
                 }
 
                 // attributes
@@ -53,9 +55,9 @@
                 }
 
                 // children, enqueue.
-                [].forEach.call(el.children || [], function(el, i) {
+                el.childNodes.forEach(function(el, i) {
                     maybeUpgrade(el)
-                    var subpath = path.concat(['children', i])
+                    var subpath = path.concat(['childNodes', i])
                     if (el instanceof Template) {
                         tokens.push({ path: subpath, tpl: true })
                         return
@@ -158,6 +160,7 @@
             // the placeholder tokens from the constructor of custom elements.
             this.tokens.forEach(function(t) {
                 var el = getPath(doc, t.path)
+
                 if (!t.attr) {
                     el.textContent = ''
                 } else {
@@ -368,14 +371,8 @@
     }
 
     function maybeUpgrade(el) {
-        if (el.matches('template')) {
+        if (el.nodeName !== '#text' && el.matches('template')) {
             pluto(el) // auto-upgrade nested templates.
-        }
-    }
-
-    function empty(el) {
-        while (el.children.length > 0) {
-            el.removeChild(el.children[0])
         }
     }
 

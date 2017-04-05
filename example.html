@@ -8,7 +8,7 @@
     <template is='pluto-tpl' id='roi'>
         <h1>{{item.toUpperCase()}}</h1>
         <ul>
-            <template is='pluto-tpl' if={{show}}>
+            <template is='pluto-tpl' repeat={{items}}>
                 <li>{{item}}</li>
             </template>
         </ul>
