@@ -170,11 +170,15 @@
 
             // generate hard links from tokens to the generated elements in
             // order to avoid re-computing them on every render.
+            var deferred = []
             this.paths = this.tokens.reduce(function (paths, t, idx) {
                 var el = getPath(doc, t.path)
                 if (t.tpl) {
                     var subdoc = pluto(el).render(obj)
-                    el.replaceWith(subdoc)
+
+                    // we can't just replace right now becuase it will break
+                    // the path of the following iterations - defer it for later
+                    deferred.push(el.replaceWith.bind(el, subdoc))
                     el = subdoc
                 }
 
@@ -188,6 +192,10 @@
 
                 return paths
             }, {})
+
+            // run all of the deferred replacements
+            deferred.forEach(fn => fn())
+
 
             // copy the list of generated elements from the template in order
             // to support removals
