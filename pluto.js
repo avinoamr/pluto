@@ -245,9 +245,12 @@
                 // set attributes
                 if (v === undefined) {
                     el.removeAttribute(t.attr)
+                    el[t.attr] = undefined
                 } else if (typeof v !== 'string' && observed) {
+                    el[t.attr] = v
                     el.attributeChangedCallback(t.attr, null, v, null)
                 } else {
+                    el[t.attr] = v
                     if (t.attr === 'class' && typeof v === 'object') {
                         if (Array.isArray(v)) {
                             return v.join(' ')
