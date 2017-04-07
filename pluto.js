@@ -244,8 +244,8 @@
 
                 // set attributes
                 if (v === undefined) {
-                    el.removeAttribute(t.attr)
                     el[t.attr] = undefined
+                    el.removeAttribute(t.attr)
                 } else if (typeof v !== 'string' && observed) {
                     el[t.attr] = v
                     el.attributeChangedCallback(t.attr, null, v, null)
@@ -409,6 +409,8 @@
     function getPath(obj, path) {
         if (!path || path.length === 0) {
             return undefined
+        } else if (path === 'this') {
+            return obj
         }
 
         if (path.expr) {
