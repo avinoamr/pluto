@@ -296,7 +296,7 @@
             doc.render = (obj) => (this.render(obj), doc)
             doc.remove = () => this.remove()
 
-            this.placeholder = placeholder()
+            this.placeholder = document.createTextNode('')
             doc.appendChild(this.placeholder)
 
             return doc
@@ -346,7 +346,7 @@
             var doc = new DocumentFragment()
             doc.render = (obj) => (this.render(obj), doc)
 
-            this.placeholder = placeholder()
+            this.placeholder = document.createTextNode('')
             doc.appendChild(this.placeholder)
             return doc
         }
@@ -377,12 +377,6 @@
     pluto.RepeatRenderer = RepeatRenderer
 
     // -- HELPER FUNCTIONS
-
-    function placeholder() {
-        var el = document.createElement('template')
-        el.setAttribute('is', 'pluto-placeholder')
-        return el
-    }
 
     function maybeUpgrade(el) {
         // don't match #text, #comment, etc.

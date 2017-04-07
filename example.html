@@ -9,8 +9,11 @@
         {{item.toUpperCase()}}
 
         <ul>
-            <template is='pluto-tpl' repeat={{items}}>
-                <li>{{item}}</li>
+            <template id='out' is='pluto-tpl' repeat={{items}}>
+                <li><h1>{{item}}</h1></li>
+                <template id='in' is='pluto-tpl' if={{show}}>
+                    <li>{{item}}</li>
+                </template>
             </template>
         </ul>
     </template>

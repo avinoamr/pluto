@@ -1,6 +1,17 @@
 # pluto
 Native HTML Template Rendering
 
+## Placeholder insertion points
+External templates (ones that the user called '.render()' on explicitly) are
+clones deeply before returning a placeholder element that acts as an insertion
+point. Otherwise, since the inner templates are deeply clones, the template
+itself acts as the insertion point.
+
+That's not straight-forward. A repeat template, that contains multiple
+sub-templates per item, must duplicate these inner templates in order to
+remember the insertion point. A different approach we found we using TextNodes
+as placeholders, as they're invisible from the children's list and dev tools.
+
 ## Attributes vs Properties
 
 Passing in arguments to custom elements, via HTML-syntax, can only be done
