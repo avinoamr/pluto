@@ -174,6 +174,7 @@
             var deferred = []
             this.paths = this.tokens.reduce(function (paths, t, idx) {
                 var el = getPath(doc, t.path)
+
                 if (t.tpl) {
                     var subdoc = pluto(el).render(obj)
 
@@ -196,7 +197,6 @@
 
             // run all of the deferred replacements
             deferred.forEach(fn => fn())
-
 
             // copy the list of generated elements from the template in order
             // to support removals
@@ -242,8 +242,6 @@
 
                     continue
                 }
-
-
 
                 // set attributes
                 if (v === undefined) {

@@ -11,6 +11,8 @@ That's not straight-forward. A repeat template, that contains multiple
 sub-templates per item, must duplicate these inner templates in order to
 remember the insertion point. A different approach we found we using TextNodes
 as placeholders, as they're invisible from the children's list and dev tools.
+it does mean that many such elements may be created for highly-nested templates
+with many repeated items. Perhaps we can do better?
 
 ## Attributes vs Properties
 
@@ -111,7 +113,12 @@ properties in async. Changing one may affect the other. This shifts us back to
 the React paradigm where everything is a property (maybe with the exception of
 `class` that can be mapped to `className`)
 
+## Upgraded elements
 
+One problem with the approach above, is that using properties in general relies
+on using getter-setter methods, which is fine, except for when an element is
+upgraded after the variables of the same name are overwritten, resulting in
+an element that contains the values themeselves instead of the getter functions.
 
 
 ## Expressions
