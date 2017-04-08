@@ -90,13 +90,25 @@
         }
 
         tokenName(s) {
+            // tokens follow the template literal syntax
+            // https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Template_literals
             var name = s
-                && ( s = s.trim() )
-                && s[0] === '{'
+                && (s = s.trim())
+                && s[0] === '$'
                 && s[1] === '{'
                 && s[s.length - 1] === '}'
-                && s[s.length - 2] === '}'
-                ? s.slice(2, -2).trim() : null
+                ? s.slice(2, -1).trim() : null
+
+            if (!name) {
+                // old-style tokens, follows the Polymer syntax.
+                var name = s
+                    && ( s = s.trim() )
+                    && s[0] === '{'
+                    && s[1] === '{'
+                    && s[s.length - 1] === '}'
+                    && s[s.length - 2] === '}'
+                    ? s.slice(2, -2).trim() : null
+            }
 
             // normal identifier
             if (!name || name.match(isIdentifier)) {
