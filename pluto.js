@@ -165,6 +165,7 @@
 
         init(obj) {
             var doc = document.importNode(this.tpl.content, true)
+
             doc.render = (obj) => (this.render(obj), doc)
             doc.remove = () => this.remove()
 
@@ -242,6 +243,8 @@
                     continue
                 }
 
+
+
                 // set attributes
                 if (v === undefined) {
                     el[t.attr] = undefined
@@ -266,7 +269,7 @@
                     }
 
                     v = v.toString()
-                    if (v === '[object Object]') {
+                    if (v.startsWith('[object ')) {
                         el.removeAttribute(t.attr)
                     } else {
                         el.setAttribute(t.attr, v)
