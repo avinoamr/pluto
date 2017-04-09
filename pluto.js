@@ -252,8 +252,8 @@ class Renderer {
                     el.removeEventListener(evName, listener)
                 }
 
-                if (typeof v2 === 'function') {
-                    v = v2._bound || v
+                if (typeof v === 'function') {
+                    v = v._bound || v
                     el.addEventListener(evName, v)
                     this.paths[i].listener = v // remember it for next render
                 }
@@ -275,11 +275,11 @@ class Renderer {
                         return v.join(' ')
                     }
 
-                    v2 = Object.keys(v).filter(function (k) {
+                    v = Object.keys(v).filter(function (k) {
                         return v[k]
                     }).join(' ')
                 } else if (expr.attr === 'style' && typeof v === 'object') {
-                    v2 = Object.keys(v).map(function(k) {
+                    v = Object.keys(v).map(function(k) {
                         return k + ': ' + v[k]
                     }).join('; ')
                 }
