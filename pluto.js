@@ -71,7 +71,7 @@ class Template extends HTMLTemplateElement {
         // the placeholder expressions from the constructor of custom elements.
         var clone = this.cloneNode(true)
         exprs.forEach(function(expr) {
-            var el = getPath(clone.content, expr.path)
+            var el = select(clone.content, expr.path)
             if (!expr.attr) {
                 el.textContent = ''
             } else {
@@ -477,11 +477,13 @@ function isExpressions(s) {
 // compile a list of template-literal expressions into a function that evaluates
 // these expression for the provided input object
 function compileExpressions(exprs) {
+    var refs = []
     var code = exprs.map(function(expr, i) {
+        refs = refs.concat(getIdentifiers(expr.expr))
         return `this[${i}] = T\`${expr.expr}\``
     }).join(';\n')
 
-    var keys = {}
+    var keys = refs.reduce((keys, k) => (keys[k] = true, keys), {})
     var fn = null
     return function(obj) {
         // check if the expressions function needs to be re-evaluated - only
@@ -495,6 +497,7 @@ function compileExpressions(exprs) {
 
         if (reEval) {
             var locals = `var { ${Object.keys(keys)} } = arguments[0];`
+            console.log('locals', locals)
             fn = eval('(function () {\n' + locals + '\n' + code + '\n})')
         }
 
@@ -508,6 +511,39 @@ function compileExpressions(exprs) {
             ? String.raw.apply(null, arguments)
             : v
     }
+}
+
+// generate the list of identifiers found in the code.
+function getIdentifiers(expr) {
+    var re = /[$A-Z_][0-9A-Z_$]*/ig
+    var whitespace = ' \n\r\t'
+    var disallowed = '\'\".'
+
+    // We first match for the valid identifier, and then check the previous
+    // non-whitespace character preceeding the identifier to verify that it's
+    // not a string or nested element.
+    var refs = {}
+    var match
+    while (match = re.exec(expr)) {
+        var lastChar;
+        do {
+            match.index -= 1
+            if (whitespace.indexOf(expr[match.index]) === -1) {
+                lastChar = expr[match.index]
+            }
+        } while (match.index > -1 && !lastChar)
+
+        if (disallowed.indexOf(lastChar) === -1) {
+            if (match[0] === 'this') {
+                continue // allow access to `this` for binding
+            }
+
+            refs[match[0]] = true
+        }
+    }
+
+    delete refs.$
+    return Object.keys(refs)
 }
 
 
