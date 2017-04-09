@@ -247,32 +247,31 @@ class Renderer {
 
         var values = this.exprs.eval(obj)
         for (var i = 0 ; i < this.tokens.length ; i += 1) {
-            var t = this.tokens[i]
+            var expr = this.exprs[i]
             var { el, observed, listener } = this.paths[i]
-            var v = getPath(obj, t.name)
-            var v2 = values[i]
+            var v = values[i]
 
             // nested template
-            if (t.tpl) {
+            if (expr.tpl) {
                 el.render(obj)
                 continue
             }
 
             // handle flat text
-            if (!t.attr) {
-                el.textContent = v2 || ''
+            if (!expr.attr) {
+                el.textContent = v || ''
                 continue
             }
 
             // event handlers
-            if (t.attr.startsWith('on-')) {
-                var evName = t.attr.slice(3)
+            if (expr.attr.startsWith('on-')) {
+                var evName = expr.attr.slice(3)
                 if (listener) {
                     el.removeEventListener(evName, listener)
                 }
 
-                if (typeof v === 'function') {
-                    v = v._bound || v
+                if (typeof v2 === 'function') {
+                    v = v2._bound || v
                     el.addEventListener(evName, v)
                     this.paths[i].listener = v // remember it for next render
                 }
@@ -281,33 +280,33 @@ class Renderer {
             }
 
             // set attributes
-            if (v2 === undefined) {
-                el[t.attr] = undefined
-                el.removeAttribute(t.attr)
-            } else if (typeof v2 !== 'string' && observed) {
-                el[t.attr] = v2
-                el.attributeChangedCallback(t.attr, null, v2, null)
+            if (v === undefined) {
+                el[expr.attr] = undefined
+                el.removeAttribute(expr.attr)
+            } else if (typeof v !== 'string' && observed) {
+                el[expr.attr] = v
+                el.attributeChangedCallback(expr.attr, null, v, null)
             } else {
-                el[t.attr] = v2
-                if (t.attr === 'class' && typeof v2 === 'object') {
-                    if (Array.isArray(v2)) {
+                el[expr.attr] = v
+                if (expr.attr === 'class' && typeof v === 'object') {
+                    if (Array.isArray(v)) {
                         return v.join(' ')
                     }
 
-                    v2 = Object.keys(v2).filter(function (k) {
-                        return v2[k]
+                    v2 = Object.keys(v).filter(function (k) {
+                        return v[k]
                     }).join(' ')
-                } else if (t.attr === 'style' && typeof v2 === 'object') {
-                    v2 = Object.keys(v2).map(function(k) {
-                        return k + ': ' + v2[k]
+                } else if (expr.attr === 'style' && typeof v === 'object') {
+                    v2 = Object.keys(v).map(function(k) {
+                        return k + ': ' + v[k]
                     }).join('; ')
                 }
 
-                v2 = v2.toString()
-                if (v2.startsWith('[object ')) {
-                    el.removeAttribute(t.attr)
+                v = v.toString()
+                if (v.startsWith('[object ')) {
+                    el.removeAttribute(expr.attr)
                 } else {
-                    el.setAttribute(t.attr, v2)
+                    el.setAttribute(expr.attr, v)
                 }
             }
         }
