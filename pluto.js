@@ -25,7 +25,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-
 class Template extends HTMLTemplateElement {
     render(obj) {
         var compiled = this.compile()
@@ -398,11 +397,6 @@ class CondRenderer {
     }
 }
 
-pluto.Template = Template
-pluto.Renderer = Renderer
-pluto.CondRenderer = CondRenderer
-pluto.RepeatRenderer = RepeatRenderer
-
 // -- HELPER FUNCTIONS
 
 function maybeUpgrade(el) {
@@ -476,6 +470,10 @@ function pluto(el) {
         : Object.setPrototypeOf(el, Template.prototype)
 }
 
+pluto.Template = Template
+pluto.Renderer = Renderer
+pluto.CondRenderer = CondRenderer
+pluto.RepeatRenderer = RepeatRenderer
 window.pluto = pluto
 })();
 
