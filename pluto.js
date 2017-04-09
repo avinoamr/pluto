@@ -246,8 +246,8 @@ class Renderer {
             }
 
             // event handlers
-            if (expr.attr.startsWith('on-')) {
-                var evName = expr.attr.slice(3)
+            if (expr.attr.startsWith('on')) {
+                var evName = expr.attr.slice(2).toLowerCase()
                 if (listener) {
                     el.removeEventListener(evName, listener)
                 }
