@@ -479,6 +479,10 @@ function isExpressions(s) {
 function compileExpressions(exprs) {
     var refs = []
     var code = exprs.map(function(expr, i) {
+        if (!expr.expr) {
+            return ''
+        }
+
         refs = refs.concat(getIdentifiers(expr.expr))
         return `this[${i}] = T\`${expr.expr}\``
     }).join(';\n')
@@ -497,7 +501,6 @@ function compileExpressions(exprs) {
 
         if (reEval) {
             var locals = `var { ${Object.keys(keys)} } = arguments[0];`
-            console.log('locals', locals)
             fn = eval('(function () {\n' + locals + '\n' + code + '\n})')
         }
 
