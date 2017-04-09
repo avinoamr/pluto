@@ -207,10 +207,10 @@ class Renderer {
         // generate hard links from tokens to the generated elements in
         // order to avoid re-computing them on every render.
         var deferred = []
-        this.paths = this.tokens.reduce(function (paths, t, idx) {
-            var el = getPath(doc, t.path)
+        this.paths = this.exprs.reduce(function (paths, expr, idx) {
+            var el = select(doc, expr.path)
 
-            if (t.tpl) {
+            if (expr.tpl) {
                 var subdoc = pluto(el).render(obj)
 
                 // we can't just replace right now becuase it will break
@@ -222,9 +222,9 @@ class Renderer {
             paths[idx] = { el }
 
             // mark observed attributes
-            if (t.attr && el.attributeChangedCallback) {
+            if (expr.attr && el.attributeChangedCallback) {
                 var observed = el.constructor.observedAttributes || [];
-                paths[idx].observed = observed.indexOf(t.attr) !== -1
+                paths[idx].observed = observed.indexOf(expr.attr) !== -1
             }
 
             return paths
@@ -246,7 +246,7 @@ class Renderer {
         }
 
         var values = this.exprs.eval(obj)
-        for (var i = 0 ; i < this.tokens.length ; i += 1) {
+        for (var i = 0 ; i < this.exprs.length ; i += 1) {
             var expr = this.exprs[i]
             var { el, observed, listener } = this.paths[i]
             var v = values[i]
