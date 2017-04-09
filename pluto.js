@@ -484,7 +484,7 @@ function compileExpressions(exprs) {
         }
 
         refs = refs.concat(getIdentifiers(expr.expr))
-        return `this[${i}] = T\`${expr.expr}\``
+        return `arguments[0][${i}] = T\`${expr.expr}\``
     }).join(';\n')
 
     var keys = refs.reduce((keys, k) => (keys[k] = true, keys), {})
@@ -500,12 +500,18 @@ function compileExpressions(exprs) {
         }, fn === null)
 
         if (reEval) {
-            var locals = `var { ${Object.keys(keys)} } = arguments[0];`
+            var locals = `var { ${Object.keys(keys)} } = this`
             fn = eval('(function () {\n' + locals + '\n' + code + '\n})')
         }
 
         var res = []
-        fn.call(res, obj)
+        try {
+            fn.call(obj, res)
+        } catch (e) {
+            console.warn(fn)
+            throw e
+        }
+
         return res
     }
 
