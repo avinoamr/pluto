@@ -32,22 +32,16 @@ class Template extends HTMLTemplateElement {
     }
 
     compile() {
-        var tokens = []
         var exprs = []
         var elements = [{ el: this.content, path: [] }]
         while (elements.length > 0) {
             var { el, path } = elements.shift()
 
-            // inner content token
+            // inner content expressions
             if (el.nodeName === '#text') {
                 var expr = isExpressions(el.textContent)
                 if (expr) {
                     exprs.push({ expr, path })
-                }
-
-                var name = this.tokenName(el.textContent || '')
-                if (name !== null) {
-                    tokens.push({ name, path })
                 }
             }
 
@@ -58,23 +52,13 @@ class Template extends HTMLTemplateElement {
                     var attr = snakeToCamelCase(attr.name)
                     exprs.push({ expr, path, attr })
                 }
-
-                var name = this.tokenName(attr.value)
-                if (name !== null) {
-                    tokens.push({ name, attr: attr.name, path })
-                }
             }, this)
-
-            if (el instanceof Template) {
-                tokens.push({ path, tpl: true })
-            }
 
             // children, enqueue.
             el.childNodes.forEach(function(el, i) {
                 maybeUpgrade(el)
                 var subpath = path.concat(['childNodes', i])
                 if (el instanceof Template) {
-                    tokens.push({ path: subpath, tpl: true })
                     exprs.push({ path: subpath, tpl: true })
                     return
                 }
@@ -83,20 +67,19 @@ class Template extends HTMLTemplateElement {
             })
         }
 
-        // remove attributes or tokens before rendering in order to hide
-        // the placeholder tokens from the constructor of custom elements.
+        // remove attributes or expressions before rendering in order to hide
+        // the placeholder expressions from the constructor of custom elements.
         var clone = this.cloneNode(true)
-        tokens.forEach(function(t) {
-            var el = getPath(clone.content, t.path)
-            if (!t.attr) {
+        exprs.forEach(function(expr) {
+            var el = getPath(clone.content, expr.path)
+            if (!expr.attr) {
                 el.textContent = ''
             } else {
-                el.removeAttribute(t.attr)
+                el.removeAttribute(expr.attr)
             }
         }, this)
 
         clone.exprs = Object.assign(exprs, { eval: compileExpressions(exprs) })
-        clone.tokens = tokens
         clone.repeat = this.tokenName(this.getAttribute('repeat'))
         clone.cond = this.tokenName(this.getAttribute('if'))
 
@@ -188,7 +171,6 @@ class Template extends HTMLTemplateElement {
 class Renderer {
     constructor(tpl) {
         this.tpl = tpl
-        this.tokens = tpl.tokens
         this.exprs = tpl.exprs
     }
 
@@ -204,7 +186,7 @@ class Renderer {
         doc.render = (obj) => (this.render(obj), doc)
         doc.remove = () => this.remove()
 
-        // generate hard links from tokens to the generated elements in
+        // generate hard links from expressions to the generated elements in
         // order to avoid re-computing them on every render.
         var deferred = []
         this.paths = this.exprs.reduce(function (paths, expr, idx) {
