@@ -33,12 +33,18 @@ class Template extends HTMLTemplateElement {
 
     compile() {
         var tokens = []
+        var exprs = []
         var elements = [{ el: this.content, path: [] }]
         while (elements.length > 0) {
             var { el, path } = elements.shift()
 
             // inner content token
             if (el.nodeName === '#text') {
+                var expr = isExpressions(el.textContent)
+                if (expr) {
+                    exprs.push({ expr, path })
+                }
+
                 var name = this.tokenName(el.textContent || '')
                 if (name !== null) {
                     tokens.push({ name, path })
@@ -47,6 +53,12 @@ class Template extends HTMLTemplateElement {
 
             // attributes
             [].forEach.call(el.attributes || [], function(attr) {
+                var expr = isExpressions(attr.value)
+                if (expr !== null) {
+                    var attr = snakeToCamelCase(attr.name)
+                    exprs.push({ expr, path, attr })
+                }
+
                 var name = this.tokenName(attr.value)
                 if (name !== null) {
                     tokens.push({ name, attr: attr.name, path })
@@ -63,6 +75,7 @@ class Template extends HTMLTemplateElement {
                 var subpath = path.concat(['childNodes', i])
                 if (el instanceof Template) {
                     tokens.push({ path: subpath, tpl: true })
+                    exprs.push({ path: subpath, tpl: true })
                     return
                 }
 
@@ -82,6 +95,7 @@ class Template extends HTMLTemplateElement {
             }
         }, this)
 
+        clone.exprs = Object.assign(exprs, { eval: compileExpressions(exprs) })
         clone.tokens = tokens
         clone.repeat = this.tokenName(this.getAttribute('repeat'))
         clone.cond = this.tokenName(this.getAttribute('if'))
@@ -175,6 +189,7 @@ class Renderer {
     constructor(tpl) {
         this.tpl = tpl
         this.tokens = tpl.tokens
+        this.exprs = tpl.exprs
     }
 
     remove() {
@@ -230,10 +245,12 @@ class Renderer {
             this._doc = this.init(obj)
         }
 
+        var values = this.exprs.eval(obj)
         for (var i = 0 ; i < this.tokens.length ; i += 1) {
             var t = this.tokens[i]
             var { el, observed, listener } = this.paths[i]
             var v = getPath(obj, t.name)
+            var v2 = values[i]
 
             // nested template
             if (t.tpl) {
@@ -243,7 +260,7 @@ class Renderer {
 
             // handle flat text
             if (!t.attr) {
-                el.textContent = v || ''
+                el.textContent = v2 || ''
                 continue
             }
 
@@ -264,33 +281,33 @@ class Renderer {
             }
 
             // set attributes
-            if (v === undefined) {
+            if (v2 === undefined) {
                 el[t.attr] = undefined
                 el.removeAttribute(t.attr)
-            } else if (typeof v !== 'string' && observed) {
-                el[t.attr] = v
-                el.attributeChangedCallback(t.attr, null, v, null)
+            } else if (typeof v2 !== 'string' && observed) {
+                el[t.attr] = v2
+                el.attributeChangedCallback(t.attr, null, v2, null)
             } else {
-                el[t.attr] = v
-                if (t.attr === 'class' && typeof v === 'object') {
-                    if (Array.isArray(v)) {
+                el[t.attr] = v2
+                if (t.attr === 'class' && typeof v2 === 'object') {
+                    if (Array.isArray(v2)) {
                         return v.join(' ')
                     }
 
-                    v = Object.keys(v).filter(function (k) {
-                        return v[k]
+                    v2 = Object.keys(v2).filter(function (k) {
+                        return v2[k]
                     }).join(' ')
-                } else if (t.attr === 'style' && typeof v === 'object') {
-                    v = Object.keys(v).map(function(k) {
-                        return k + ': ' + v[k]
+                } else if (t.attr === 'style' && typeof v2 === 'object') {
+                    v2 = Object.keys(v2).map(function(k) {
+                        return k + ': ' + v2[k]
                     }).join('; ')
                 }
 
-                v = v.toString()
-                if (v.startsWith('[object ')) {
+                v2 = v2.toString()
+                if (v2.startsWith('[object ')) {
                     el.removeAttribute(t.attr)
                 } else {
-                    el.setAttribute(t.attr, v)
+                    el.setAttribute(t.attr, v2)
                 }
             }
         }
@@ -451,6 +468,65 @@ function getPath(obj, path) {
     }
 
     return v
+}
+
+
+// Searches for an element from root based on the property-path to the child
+// example: root = <body>, path = childNodes.3.childNode.7. Resolved by walking
+// the path down to the child.
+function select(root, path) {
+    var current = root
+    for (var i = 0; current !== undefined && i < path.length; i += 1) {
+        current = current[path[i]]
+    }
+    return current
+}
+
+const SNAKE_RE = /-([a-z])/g
+function snakeToCamelCase(s) {
+    return s.replace(SNAKE_RE, g => g[1].toUpperCase())
+}
+
+// extract expressions in template-literal syntax out of a string
+var EXPR_RE = /\$\{[^\}]*\}/
+function isExpressions(s) {
+    return EXPR_RE.test(s) ? s : null
+}
+
+// compile a list of template-literal expressions into a function that evaluates
+// these expression for the provided input object
+function compileExpressions(exprs) {
+    var code = exprs.map(function(expr, i) {
+        return `this[${i}] = T\`${expr.expr}\``
+    }).join(';\n')
+
+    var keys = {}
+    var fn = null
+    return function(obj) {
+        // check if the expressions function needs to be re-evaluated - only
+        // when new keys exists on the input object that needs to be evaluated
+        // as local variables. Generally - as long as the object doesn't add new
+        // keys on every rerender, the function will be reevaluated infrequently
+        // TODO: Might not work for HTMLElement objects
+        var reEval = Object.keys(obj).reduce(function (reEval, k) {
+            return keys[k] ? reEval : (keys[k] = true)
+        }, fn === null)
+
+        if (reEval) {
+            var locals = `var { ${Object.keys(keys)} } = arguments[0];`
+            fn = eval('(function () {\n' + locals + '\n' + code + '\n})')
+        }
+
+        var res = []
+        fn.call(res, obj)
+        return res
+    }
+
+    function T(s, v) {
+        return arguments.length > 2 || typeof v === 'string'
+            ? String.raw.apply(null, arguments)
+            : v
+    }
 }
 
 

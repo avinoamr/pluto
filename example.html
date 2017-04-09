@@ -6,13 +6,13 @@
     <script src="pluto.js" charset="utf-8"></script>
 
     <template is='pluto-tpl' id='roi'>
-        {{item.toUpperCase()}}
+        ${item.toUpperCase()}
 
         <ul>
-            <template id='out' is='pluto-tpl' repeat={{items}}>
-                <li><h1>{{item}}</h1></li>
-                <template id='in' is='pluto-tpl' if={{show}}>
-                    <li>{{item}}</li>
+            <template id='out' is='pluto-tpl' repeat=${items}>
+                <li><h1>${item}</h1></li>
+                <template id='in' is='pluto-tpl' if=${show}>
+                    <li>${item.toLowerCase()}</li>
                 </template>
             </template>
         </ul>
