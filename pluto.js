@@ -478,13 +478,13 @@ function isExpressions(s) {
 // these expression for the provided input object
 function compileExpressions(exprs) {
     var refs = []
-    var code = 'var T = Tx.bind(this);\n'
+    var code = 'this.__plutoT || (this.__plutoT = T.bind(this));\n'
     code += exprs.map(function(expr, i) {
         if (expr.expr) {
             refs = refs.concat(getIdentifiers(expr.expr))
         }
 
-        return `arguments[0][${i}] = T\`${expr.expr}\``
+        return `arguments[0][${i}] = this.__plutoT\`${expr.expr}\``
     }).join(';\n')
 
     var keys = refs.reduce((keys, k) => (keys[k] = true, keys), {})
@@ -515,7 +515,7 @@ function compileExpressions(exprs) {
         return res
     }
 
-    function Tx(s, v) {
+    function T(s, v) {
         if (arguments.length > 2 || typeof v === 'string' || v === undefined) {
             return String.raw.apply(null, arguments)
         }
