@@ -479,11 +479,10 @@ function isExpressions(s) {
 function compileExpressions(exprs) {
     var refs = []
     var code = exprs.map(function(expr, i) {
-        if (!expr.expr) {
-            return ''
+        if (expr.expr) {
+            refs = refs.concat(getIdentifiers(expr.expr))
         }
 
-        refs = refs.concat(getIdentifiers(expr.expr))
         return `arguments[0][${i}] = T\`${expr.expr}\``
     }).join(';\n')
 
