@@ -322,6 +322,11 @@
 
             var item = obj.item
             var items = getPath(obj, this.repeat) || []
+            if (!Array.isArray(items) && typeof items === 'object') {
+                items = Object.keys(items).map(function(k) {
+                    return { key: k, value: items[k] }
+                })
+            }
 
             // remove obsolete items
             while (this.children.length > items.length) {
