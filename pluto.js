@@ -478,7 +478,8 @@ function isExpressions(s) {
 // these expression for the provided input object
 function compileExpressions(exprs) {
     var refs = []
-    var code = exprs.map(function(expr, i) {
+    var code = 'var T = Tx.bind(this);\n'
+    code += exprs.map(function(expr, i) {
         if (expr.expr) {
             refs = refs.concat(getIdentifiers(expr.expr))
         }
@@ -514,10 +515,19 @@ function compileExpressions(exprs) {
         return res
     }
 
-    function T(s, v) {
-        return arguments.length > 2 || typeof v === 'string'
-            ? String.raw.apply(null, arguments)
-            : v
+    function Tx(s, v) {
+        if (arguments.length > 2 || typeof v === 'string' || v === undefined) {
+            return String.raw.apply(null, arguments)
+        }
+
+        if (typeof v === 'function' && this[v.name] === v) {
+            if (v._plutoBound !== this) {
+                v._plutoBound = v.bind(this)
+            }
+            return v._plutoBound
+        }
+
+        return v
     }
 }
 
