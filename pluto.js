@@ -49,8 +49,14 @@ class Template extends HTMLTemplateElement {
             [].forEach.call(el.attributes || [], function(attr) {
                 var expr = isExpressions(attr.value)
                 if (expr !== null) {
-                    var attr = snakeToCamelCase(attr.name)
-                    exprs.push({ expr, path, attr })
+                    var evName
+
+                    if (attr.name.startsWith('on-')) {
+                        evName = attr.name.slice(3)
+                    }
+
+                    attr = snakeToCamelCase(attr.name)
+                    exprs.push({ expr, path, attr, evName })
                 }
             }, this)
 
@@ -239,25 +245,24 @@ class Renderer {
                 continue
             }
 
-            // handle flat text
-            if (!expr.attr) {
-                el.textContent = v || ''
-                continue
-            }
-
             // event handlers
-            if (expr.attr.startsWith('on')) {
-                var evName = expr.attr.slice(2).toLowerCase()
+            if (expr.evName) {
                 if (listener) {
-                    el.removeEventListener(evName, listener)
+                    el.removeEventListener(expr.evName, listener)
                 }
 
                 if (typeof v === 'function') {
                     v = v._bound || v
-                    el.addEventListener(evName, v)
+                    el.addEventListener(expr.evName, v)
                     this.paths[i].listener = v // remember it for next render
                 }
 
+                continue
+            }
+
+            // handle flat text
+            if (!expr.attr) {
+                el.textContent = v || ''
                 continue
             }
 
