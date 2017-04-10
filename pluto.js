@@ -85,10 +85,19 @@ class Template extends HTMLTemplateElement {
             }
         }, this)
 
-        clone.exprs = Object.assign(exprs, { eval: compileExpressions(exprs) })
-
+        var toCompile = [].concat(exprs)
         var repeat = this.getAttribute('repeat')
+        if (repeat) {
+            toCompile.push({ expr: repeat })
+        }
+
         var cond = this.getAttribute('if')
+        if (cond) {
+            toCompile.push({ expr: cond })
+        }
+
+        clone.exprs = Object.assign(exprs, { eval: compileExpressions(toCompile) })
+
         if (cond) {
             clone.cond = this.tokenName(cond)
             clone.Renderer = CondRenderer
@@ -309,6 +318,7 @@ class RepeatRenderer {
         this.tpl = tpl
         this.children = []
         this.repeat = tpl.repeat
+        this.exprs = tpl.exprs
     }
 
     remove() {
@@ -333,8 +343,9 @@ class RepeatRenderer {
             this._doc = this.init()
         }
 
+        var values = this.exprs.eval(obj)
+        var items = values[values.length - 1]
         var item = obj.item
-        var items = getPath(obj, this.repeat) || []
         if (!Array.isArray(items) && typeof items === 'object') {
             items = Object.keys(items).map(function(k) {
                 return { key: k, value: items[k] }
@@ -371,6 +382,7 @@ class CondRenderer {
         this.tpl = tpl
         this.child = null
         this.cond = tpl.cond
+        this.exprs = tpl.exprs
     }
 
     init() {
@@ -387,7 +399,8 @@ class CondRenderer {
             this._doc = this.init()
         }
 
-        var cond = getPath(obj, this.cond) || false
+        var values = this.exprs.eval(obj)
+        var cond = values[values.length - 1] || false
         if (cond && this.child) {
             this.child.render(obj)
         } else if (cond && !this.child) {
