@@ -488,7 +488,7 @@ function getIdentifiers(expr) {
     var refs = {}
     var match
     while (match = re.exec(expr)) {
-        var lastChar;
+        var lastChar = undefined
         do {
             match.index -= 1
             if (whitespace.indexOf(expr[match.index]) === -1) {
@@ -499,6 +499,10 @@ function getIdentifiers(expr) {
         if (disallowed.indexOf(lastChar) === -1) {
             if (match[0] === 'this') {
                 continue // allow access to `this` for binding
+            }
+
+            if (window[match[0]] !== undefined) {
+                continue // keep global functions (Object, Array, etc.)
             }
 
             refs[match[0]] = true
