@@ -8,8 +8,10 @@
     <template is='pluto-tpl' id='roi'>
         ${item.toUpperCase()}
 
+        <!-- ${['hello', 'world']} -->
+
         <ul>
-            <template id='out' is='pluto-tpl' repeat=${items}>
+            <template id='out' is='pluto-tpl' repeat="${['hello', 'world', 'foo']}">
                 <li><h1>${item}</h1></li>
                 <template id='in' is='pluto-tpl' if=${show}>
                     <li>${item.toLowerCase()}</li>

@@ -86,12 +86,14 @@ class Template extends HTMLTemplateElement {
         }, this)
 
         clone.exprs = Object.assign(exprs, { eval: compileExpressions(exprs) })
-        clone.repeat = this.tokenName(this.getAttribute('repeat'))
-        clone.cond = this.tokenName(this.getAttribute('if'))
 
-        if (clone.cond) {
+        var repeat = this.getAttribute('repeat')
+        var cond = this.getAttribute('if')
+        if (cond) {
+            clone.cond = this.tokenName(cond)
             clone.Renderer = CondRenderer
-        } else if (clone.repeat) {
+        } else if (repeat) {
+            clone.repeat = this.tokenName(repeat)
             clone.Renderer = RepeatRenderer
         } else {
             clone.Renderer = Renderer
