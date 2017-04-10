@@ -49,14 +49,14 @@ class Template extends HTMLTemplateElement {
             [].forEach.call(el.attributes || [], function(attr) {
                 var expr = isExpressions(attr.value)
                 if (expr !== null) {
-                    var evName
-
-                    if (attr.name.startsWith('on-')) {
-                        evName = attr.name.slice(3)
+                    attr = attr.name
+                    var evName, prop
+                    if (attr.startsWith('on-')) {
+                        evName = attr.slice(3)
+                    } else {
+                        prop = snakeToCamelCase(attr)
                     }
-
-                    attr = snakeToCamelCase(attr.name)
-                    exprs.push({ expr, path, attr, evName })
+                    exprs.push({ expr, path, attr, evName, prop })
                 }
             }, this)
 
