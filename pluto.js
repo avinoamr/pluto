@@ -516,7 +516,7 @@ function compileExpressions(exprs) {
     }
 
     function T(s, v) {
-        if (arguments.length > 2 || typeof v === 'string' || v === undefined) {
+        if (arguments.length > 2 || typeof v === 'string') {
             return String.raw.apply(null, arguments)
         }
 
