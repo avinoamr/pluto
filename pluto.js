@@ -99,89 +99,14 @@ class Template extends HTMLTemplateElement {
         clone.exprs = Object.assign(exprs, { eval: compileExpressions(toCompile) })
 
         if (cond) {
-            clone.cond = this.tokenName(cond)
             clone.Renderer = CondRenderer
         } else if (repeat) {
-            clone.repeat = this.tokenName(repeat)
             clone.Renderer = RepeatRenderer
         } else {
             clone.Renderer = Renderer
         }
 
         return clone
-    }
-
-    tokenName(s) {
-        // tokens follow the template literal syntax
-        // https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Template_literals
-        var name = s
-            && (s = s.trim())
-            && s[0] === '$'
-            && s[1] === '{'
-            && s[s.length - 1] === '}'
-            ? s.slice(2, -1).trim() : null
-
-        if (!name) {
-            // old-style tokens, follows the Polymer syntax.
-            var name = s
-                && ( s = s.trim() )
-                && s[0] === '{'
-                && s[1] === '{'
-                && s[s.length - 1] === '}'
-                && s[s.length - 2] === '}'
-                ? s.slice(2, -2).trim() : null
-        }
-
-        // normal identifier
-        if (!name || name.match(isIdentifier)) {
-            return name
-        }
-
-        // it's probably a javascript expression
-        return { expr: name, fn: this.evalExpr(name) }
-    }
-
-    evalExpr(expr) {
-        var re = /[$A-Z_][0-9A-Z_$]*/ig
-        var whitespace = ' \n\r\t'
-        var disallowed = '\'\".'
-
-        // generate the list of identifiers found in the code. We first match
-        // for the valid identifier, and then check the previous non-whitespace
-        // character preceeding the identifier to verify that it's not a string
-        // or nested element.
-        var refs = {}
-        var match
-        while (match = re.exec(expr)) {
-            var lastChar;
-            do {
-                match.index -= 1
-                if (whitespace.indexOf(expr[match.index]) === -1) {
-                    lastChar = expr[match.index]
-                }
-            } while (match.index > -1 && !lastChar)
-
-            if (disallowed.indexOf(lastChar) === -1) {
-                if (match[0] === 'this') {
-                    continue // allow access to `this` for binding
-                }
-
-                refs[match[0]] = true
-            }
-        }
-
-        // evaluate a function that sets all of the references found as local
-        // variables and then executes the original expression.
-        var code = Object.keys(refs).map(function (ref) {
-            return 'var ' + ref + ' = this.' + ref
-        }).join(';') + ' ; return ' + expr
-
-        try {
-            return pluto._eval('function _expr() {' + code + '}; _expr')
-        } catch(err) {
-            console.warn(err.message, 'in: {{', expr, '}}')
-            return function () {}
-        }
     }
 }
 
