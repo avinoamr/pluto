@@ -92,7 +92,8 @@ class Template extends HTMLTemplateElement {
 
         var cond = this.getAttribute('if')
         if (cond) {
-            clone.cond = compileExpressions([{ expr: cond }])
+            var items = compileExpressions([{ expr: cond }])
+            clone.items = (obj) => items(obj).map(Boolean) // coerce to bool
         }
 
         // we opt to compile the repeat/cond expressions separately than the
@@ -104,7 +105,7 @@ class Template extends HTMLTemplateElement {
         clone.exprs = Object.assign(exprs, { eval: compileExpressions(exprs) })
 
         if (cond) {
-            clone.Renderer = CondRenderer
+            clone.Renderer = RepeatRenderer
         } else if (repeat) {
             clone.Renderer = RepeatRenderer
         } else {
@@ -284,6 +285,7 @@ class RepeatRenderer {
 
         if (typeof items === 'number') {
             items = new Array(items) // range-items, repeat N times.
+            items = Array.from(items).map(() => item)
         }
 
         // remove obsolete items
@@ -307,50 +309,6 @@ class RepeatRenderer {
         }
 
         obj.item = item // restore previous item value.
-        return this._doc
-    }
-}
-
-class CondRenderer {
-    constructor(tpl) {
-        this.tpl = tpl
-        this.child = null
-        this.cond = tpl.cond
-        this.exprs = tpl.exprs
-    }
-
-    init() {
-        var doc = new DocumentFragment()
-        doc.render = (obj) => (this.render(obj), doc)
-        doc.remove = () => this.remove()
-
-        this.placeholder = document.createTextNode('')
-        doc.appendChild(this.placeholder)
-        return doc
-    }
-
-    remove() {
-        if (this.child) {
-            this.child = this.child.remove()
-        }
-    }
-
-    render(obj) {
-        if (!this._doc) {
-            this._doc = this.init()
-        }
-
-        var cond = this.cond(obj)[0] || false
-        if (cond && this.child) {
-            this.child.render(obj)
-        } else if (cond && !this.child) {
-            var doc = new Renderer(this.tpl).render(obj)
-            this.placeholder.before(doc)
-            this.child = doc
-        } else if (!cond && this.child) {
-            this.child = this.child.remove()
-        }
-
         return this._doc
     }
 }
@@ -486,7 +444,6 @@ function pluto(el) {
 
 pluto.Template = Template
 pluto.Renderer = Renderer
-pluto.CondRenderer = CondRenderer
 pluto.RepeatRenderer = RepeatRenderer
 window.pluto = pluto
 })();
