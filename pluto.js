@@ -135,17 +135,16 @@ class Renderer {
 
         // generate hard links from expressions to the generated elements in
         // order to avoid re-computing them on every render.
-        var deferred = []
         this.paths = this.exprs.reduce(function (paths, expr, idx) {
             var el = select(doc, expr.path)
 
             if (expr.tpl) {
-                var subdoc = pluto(el).render(obj)
-
-                // we can't just replace right now becuase it will break
-                // the path of the following iterations - defer it for later
-                deferred.push(el.replaceWith.bind(el, subdoc))
-                el = subdoc
+                el.render = function() {
+                    delete el.render
+                    var subdoc = pluto(this).render(obj)
+                    this.replaceWith(subdoc)
+                    this.render = subdoc.render.bind(subdoc)
+                }
             }
 
             paths[idx] = { el }
@@ -158,9 +157,6 @@ class Renderer {
 
             return paths
         }, {})
-
-        // run all of the deferred replacements
-        deferred.forEach(fn => fn())
 
         // copy the list of generated elements from the template in order
         // to support removals
