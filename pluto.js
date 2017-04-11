@@ -392,22 +392,9 @@ function compileExpressions(exprs) {
     }).join(';\n')
 
     var keys = refs.reduce((keys, k) => (keys[k] = true, keys), {})
-    var fn = null
+    var locals = `var { ${Object.keys(keys)} } = this`
+    var fn = eval('(function () {\n' + locals + '\n' + code + '\n})')
     return function(obj) {
-        // check if the expressions function needs to be re-evaluated - only
-        // when new keys exists on the input object that needs to be evaluated
-        // as local variables. Generally - as long as the object doesn't add new
-        // keys on every rerender, the function will be reevaluated infrequently
-        // TODO: Might not work for HTMLElement objects
-        var reEval = Object.keys(obj).reduce(function (reEval, k) {
-            return keys[k] ? reEval : (keys[k] = true)
-        }, fn === null)
-
-        if (reEval) {
-            var locals = `var { ${Object.keys(keys)} } = this`
-            fn = eval('(function () {\n' + locals + '\n' + code + '\n})')
-        }
-
         var res = []
         try {
             fn.call(obj, res)
