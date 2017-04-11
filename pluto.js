@@ -369,41 +369,6 @@ function toObj(obj) {
     return obj || {}
 }
 
-var isIdentifier = /^[$A-Z_][0-9A-Z_$\.]*$/i;
-
-function getPath(obj, path) {
-    if (!path || path.length === 0) {
-        return undefined
-    } else if (path === 'this') {
-        return obj
-    }
-
-    if (path.expr) {
-        try {
-            return path.fn.call(obj)
-        } catch (err) {
-            console.warn(err.message, 'in:', path.expr)
-            return undefined
-        }
-    }
-
-    var path = Array.isArray(path) ? path : path.split('.')
-    var v = obj
-    var bound = null
-    for (var i = 0; v !== undefined && i < path.length; i += 1) {
-        bound = v
-        v = v[path[i]]
-    }
-
-    if (typeof v === 'function') {
-        // may cause event listeners to re-register un-necessarily
-        v._bound = v.bind(bound)
-    }
-
-    return v
-}
-
-
 // Searches for an element from root based on the property-path to the child
 // example: root = <body>, path = childNodes.3.childNode.7. Resolved by walking
 // the path down to the child.
