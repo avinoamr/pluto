@@ -144,6 +144,7 @@ class Renderer {
                     var subdoc = pluto(this).render(obj)
                     this.replaceWith(subdoc)
                     this.render = subdoc.render.bind(subdoc)
+                    this.remove = subdoc.remove.bind(subdoc)
                 }
             }
 
@@ -321,10 +322,17 @@ class CondRenderer {
     init() {
         var doc = new DocumentFragment()
         doc.render = (obj) => (this.render(obj), doc)
+        doc.remove = () => this.remove()
 
         this.placeholder = document.createTextNode('')
         doc.appendChild(this.placeholder)
         return doc
+    }
+
+    remove() {
+        if (this.child) {
+            this.child = this.child.remove()
+        }
     }
 
     render(obj) {
