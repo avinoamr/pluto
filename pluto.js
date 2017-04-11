@@ -85,18 +85,23 @@ class Template extends HTMLTemplateElement {
             }
         }, this)
 
-        var toCompile = [].concat(exprs)
         var repeat = this.getAttribute('repeat')
         if (repeat) {
-            toCompile.push({ expr: repeat })
+            clone.repeat = compileExpressions([{ expr: repeat }])
         }
 
         var cond = this.getAttribute('if')
         if (cond) {
-            toCompile.push({ expr: cond })
+            clone.cond = compileExpressions([{ expr: cond }])
         }
 
-        clone.exprs = Object.assign(exprs, { eval: compileExpressions(toCompile) })
+        // we opt to compile the repeat/cond expressions separately than the
+        // rest of this template - because (a) the template might relay on a
+        // repeated ${item} property that doesn't yet exist in the repeat
+        // expression, and (b) it's must smaller/faster than the complete
+        // expressions list.
+        // NB: It might not be that beneficial for cond though.
+        clone.exprs = Object.assign(exprs, { eval: compileExpressions(exprs) })
 
         if (cond) {
             clone.Renderer = CondRenderer
@@ -268,8 +273,7 @@ class RepeatRenderer {
             this._doc = this.init()
         }
 
-        var values = this.exprs.eval(obj)
-        var items = values[values.length - 1]
+        var items = this.repeat(obj)[0]
         var item = obj.item
         if (!Array.isArray(items) && typeof items === 'object') {
             items = Object.keys(items).map(function(k) {
@@ -324,8 +328,7 @@ class CondRenderer {
             this._doc = this.init()
         }
 
-        var values = this.exprs.eval(obj)
-        var cond = values[values.length - 1] || false
+        var cond = this.cond(obj)[0] || false
         if (cond && this.child) {
             this.child.render(obj)
         } else if (cond && !this.child) {
