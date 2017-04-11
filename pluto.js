@@ -207,32 +207,29 @@ class Renderer {
 
             // set attributes
             if (v === undefined) {
-                el[expr.attr] = undefined
-                el.removeAttribute(expr.attr)
-            } else if (typeof v !== 'string' && observed) {
-                el[expr.attr] = v
-                el.attributeChangedCallback(expr.attr, null, v, null)
+                el[expr.prop] = undefined
             } else {
-                el[expr.attr] = v
+                el[expr.prop] = v
                 if (expr.attr === 'class' && typeof v === 'object') {
-                    if (Array.isArray(v)) {
-                        return v.join(' ')
+                    if (!Array.isArray(v)) {
+                        v = Object.keys(v).filter(function (k) {
+                            return v[k]
+                        })
                     }
 
-                    v = Object.keys(v).filter(function (k) {
-                        return v[k]
-                    }).join(' ')
+                    v = v.join(' ')
                 } else if (expr.attr === 'style' && typeof v === 'object') {
                     v = Object.keys(v).map(function(k) {
                         return k + ': ' + v[k]
                     }).join('; ')
                 }
 
-                v = v.toString()
-                if (v.startsWith('[object ')) {
-                    el.removeAttribute(expr.attr)
-                } else {
-                    el.setAttribute(expr.attr, v)
+                if (['class', 'style'].indexOf(expr.attr) !== -1) {
+                    if (!v) {
+                        el.removeAttribute(expr.attr)
+                    } else {
+                        el.setAttribute(expr.attr, v)
+                    }
                 }
             }
         }
