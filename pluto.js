@@ -269,12 +269,20 @@ class RepeatRenderer {
             this._doc = this.init()
         }
 
-        var items = this.repeat(obj)[0]
+        var items = this.repeat(obj)[0] || []
         var item = obj.item
         if (!Array.isArray(items) && typeof items === 'object') {
             items = Object.keys(items).map(function(k) {
                 return { key: k, value: items[k] }
             })
+        }
+
+        if (typeof items === 'boolean') {
+            items = Number(items) // 0 or 1
+        }
+
+        if (typeof items === 'number') {
+            items = new Array(items) // range-items, repeat N times.
         }
 
         // remove obsolete items
