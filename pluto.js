@@ -393,6 +393,11 @@ function getIdentifiers(expr) {
     var re = /[$A-Z_][0-9A-Z_$]*/ig
     var whitespace = ' \n\r\t'
     var disallowed = '\'\".'
+    var skip = ['true', 'false', 'if', 'for', 'while', 'do', 'try', 'catch',
+        'break', 'continue', 'switch', 'throw', 'this', 'instanceof', 'in',
+        'function', 'delete', 'default', 'case', 'debugger', 'const', 'var',
+        'with', 'typeof', 'super', 'class', 'new', 'null', 'return', 'let',
+        'import', 'else', 'enum', 'extends', 'finally', '$']
 
     // We first match for the valid identifier, and then check the previous
     // non-whitespace character preceeding the identifier to verify that it's
@@ -400,6 +405,14 @@ function getIdentifiers(expr) {
     var refs = {}
     var match
     while (match = re.exec(expr)) {
+        if (skip.indexOf(match[0]) !== -1) {
+            continue // skipped or reserved keyword
+        }
+
+        if (window[match[0]] !== undefined) {
+            continue // keep global functions (Object, Array, etc.)
+        }
+
         var lastChar = undefined
         do {
             match.index -= 1
@@ -409,19 +422,10 @@ function getIdentifiers(expr) {
         } while (match.index > -1 && !lastChar)
 
         if (disallowed.indexOf(lastChar) === -1) {
-            if (match[0] === 'this') {
-                continue // allow access to `this` for binding
-            }
-
-            if (window[match[0]] !== undefined) {
-                continue // keep global functions (Object, Array, etc.)
-            }
-
             refs[match[0]] = true
         }
     }
 
-    delete refs.$
     return Object.keys(refs)
 }
 
