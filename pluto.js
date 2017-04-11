@@ -356,19 +356,6 @@ function maybeUpgrade(el) {
     }
 }
 
-function toObj(obj) {
-    if (obj instanceof NamedNodeMap) {
-        // convinience for passing HTMLElement.attributes
-        var map = obj
-        obj = {}
-        for (var i = 0; i < map.length; i += 1) {
-            obj[map[i].name] = map[i].value
-        }
-    }
-
-    return obj || {}
-}
-
 // Searches for an element from root based on the property-path to the child
 // example: root = <body>, path = childNodes.3.childNode.7. Resolved by walking
 // the path down to the child.
