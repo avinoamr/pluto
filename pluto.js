@@ -87,7 +87,7 @@ class Template extends HTMLTemplateElement {
 
         var repeat = this.getAttribute('repeat')
         if (repeat) {
-            clone.repeat = compileExpressions([{ expr: repeat }])
+            clone.items = compileExpressions([{ expr: repeat }])
         }
 
         var cond = this.getAttribute('if')
@@ -244,7 +244,7 @@ class RepeatRenderer {
     constructor(tpl) {
         this.tpl = tpl
         this.children = []
-        this.repeat = tpl.repeat
+        this.items = tpl.items
         this.exprs = tpl.exprs
     }
 
@@ -270,7 +270,7 @@ class RepeatRenderer {
             this._doc = this.init()
         }
 
-        var items = this.repeat(obj)[0] || []
+        var items = this.items(obj)[0] || []
         var item = obj.item
         if (!Array.isArray(items) && typeof items === 'object') {
             items = Object.keys(items).map(function(k) {
