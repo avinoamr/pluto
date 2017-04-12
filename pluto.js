@@ -201,12 +201,6 @@ class Renderer {
 
             paths[idx] = { el }
 
-            // mark observed attributes
-            if (expr.attr && el.attributeChangedCallback) {
-                var observed = el.constructor.observedAttributes || [];
-                paths[idx].observed = observed.indexOf(expr.attr) !== -1
-            }
-
             return paths
         }, {})
 
@@ -224,7 +218,7 @@ class Renderer {
             var values = this.exprs.eval(obj)
             for (var i = 0 ; i < this.exprs.length ; i += 1) {
                 var expr = this.exprs[i]
-                var { el, observed, listener } = doc.paths[i]
+                var { el, listener } = doc.paths[i]
                 var v = values[i]
 
                 // nested template
