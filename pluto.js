@@ -28,7 +28,7 @@
 class Template extends HTMLTemplateElement {
     render(obj) {
         var compiled = this.compile()
-        return new compiled.Renderer(compiled).render(obj)
+        return new Renderer(compiled).render(obj)
     }
 
     compile() {
@@ -85,6 +85,7 @@ class Template extends HTMLTemplateElement {
             }
         }, this)
 
+        clone.items = (obj) => [[obj.item]]
         var repeat = this.getAttribute('repeat')
         if (repeat) {
             clone.items = compileExpressions([{ expr: repeat }])
@@ -103,15 +104,6 @@ class Template extends HTMLTemplateElement {
         // expressions list.
         // NB: It might not be that beneficial for cond though.
         clone.exprs = Object.assign(exprs, { eval: compileExpressions(exprs) })
-
-        if (cond) {
-            clone.Renderer = RepeatRenderer
-        } else if (repeat) {
-            clone.Renderer = RepeatRenderer
-        } else {
-            clone.Renderer = Renderer
-        }
-
         return clone
     }
 }
@@ -119,131 +111,9 @@ class Template extends HTMLTemplateElement {
 class Renderer {
     constructor(tpl) {
         this.tpl = tpl
-        this.exprs = tpl.exprs
-    }
-
-    remove() {
-        while (this.children.length > 0) {
-            this.children.pop().remove()
-        }
-    }
-
-    init(obj) {
-        var doc = document.importNode(this.tpl.content, true)
-
-        doc.render = (obj) => (this.render(obj), doc)
-        doc.remove = () => this.remove()
-
-        // generate hard links from expressions to the generated elements in
-        // order to avoid re-computing them on every render.
-        this.paths = this.exprs.reduce(function (paths, expr, idx) {
-            var el = select(doc, expr.path)
-
-            if (expr.tpl) {
-                el.render = function() {
-                    delete el.render
-                    var subdoc = pluto(this).render(obj)
-                    this.replaceWith(subdoc)
-                    this.render = subdoc.render.bind(subdoc)
-                    this.remove = subdoc.remove.bind(subdoc)
-                }
-            }
-
-            paths[idx] = { el }
-
-            // mark observed attributes
-            if (expr.attr && el.attributeChangedCallback) {
-                var observed = el.constructor.observedAttributes || [];
-                paths[idx].observed = observed.indexOf(expr.attr) !== -1
-            }
-
-            return paths
-        }, {})
-
-        // copy the list of generated elements from the template in order
-        // to support removals
-        this.children = [].map.call(doc.childNodes, child => child)
-
-        return doc
-    }
-
-    render(obj) {
-        if (!this._doc) {
-            this._doc = this.init(obj)
-        }
-
-        var values = this.exprs.eval(obj)
-        for (var i = 0 ; i < this.exprs.length ; i += 1) {
-            var expr = this.exprs[i]
-            var { el, observed, listener } = this.paths[i]
-            var v = values[i]
-
-            // nested template
-            if (expr.tpl) {
-                el.render(obj)
-                continue
-            }
-
-            // event handlers
-            if (expr.evName) {
-                if (listener) {
-                    el.removeEventListener(expr.evName, listener)
-                }
-
-                if (typeof v === 'function') {
-                    v = v._bound || v
-                    el.addEventListener(expr.evName, v)
-                    this.paths[i].listener = v // remember it for next render
-                }
-
-                continue
-            }
-
-            // handle flat text
-            if (!expr.attr) {
-                el.textContent = v || ''
-                continue
-            }
-
-            // set attributes
-            if (v === undefined) {
-                el[expr.prop] = undefined
-            } else {
-                el[expr.prop] = v
-                if (expr.attr === 'class' && typeof v === 'object') {
-                    if (!Array.isArray(v)) {
-                        v = Object.keys(v).filter(function (k) {
-                            return v[k]
-                        })
-                    }
-
-                    v = v.join(' ')
-                } else if (expr.attr === 'style' && typeof v === 'object') {
-                    v = Object.keys(v).map(function(k) {
-                        return k + ': ' + v[k]
-                    }).join('; ')
-                }
-
-                if (['class', 'style'].indexOf(expr.attr) !== -1) {
-                    if (!v) {
-                        el.removeAttribute(expr.attr)
-                    } else {
-                        el.setAttribute(expr.attr, v)
-                    }
-                }
-            }
-        }
-
-        return this._doc
-    }
-}
-
-class RepeatRenderer {
-    constructor(tpl) {
-        this.tpl = tpl
         this.children = []
-        this.items = tpl.items
         this.exprs = tpl.exprs
+        this.items = tpl.items
     }
 
     remove() {
@@ -300,13 +170,122 @@ class RepeatRenderer {
         while (this.children.length < items.length) {
             var i = this.children.length
             obj.item = items[i]
-            var doc = new Renderer(this.tpl).render(obj)
+            var doc = this._renderOne(obj)// new Renderer(this.tpl).render(obj)
             this.children.push(doc)
             this.placeholder.before(doc)
         }
 
         obj.item = item // restore previous item value.
         return this._doc
+    }
+
+    _renderOne(obj) {
+        var doc = document.importNode(this.tpl.content, true)
+        // doc.render = (obj) => (this.render(obj), doc)
+        // doc.remove = () => this.remove()
+
+        // generate hard links from expressions to the generated elements in
+        // order to avoid re-computing them on every render.
+        doc.paths = this.exprs.reduce(function (paths, expr, idx) {
+            var el = select(doc, expr.path)
+
+            if (expr.tpl) {
+                el.render = function() {
+                    delete el.render
+                    var subdoc = pluto(this).render(obj)
+                    this.replaceWith(subdoc)
+                    this.render = subdoc.render.bind(subdoc)
+                    this.remove = subdoc.remove.bind(subdoc)
+                }
+            }
+
+            paths[idx] = { el }
+
+            // mark observed attributes
+            if (expr.attr && el.attributeChangedCallback) {
+                var observed = el.constructor.observedAttributes || [];
+                paths[idx].observed = observed.indexOf(expr.attr) !== -1
+            }
+
+            return paths
+        }, {})
+
+        // copy the list of generated elements from the template in order
+        // to support removals
+        doc.generated = [].map.call(doc.childNodes, child => child)
+
+        doc.remove = function() {
+            while(this.generated.length > 0) {
+                this.generated.pop().remove()
+            }
+        }
+
+        doc.render = function(obj) {
+            var values = this.exprs.eval(obj)
+            for (var i = 0 ; i < this.exprs.length ; i += 1) {
+                var expr = this.exprs[i]
+                var { el, observed, listener } = doc.paths[i]
+                var v = values[i]
+
+                // nested template
+                if (expr.tpl) {
+                    el.render(obj)
+                    continue
+                }
+
+                // event handlers
+                if (expr.evName) {
+                    if (listener) {
+                        el.removeEventListener(expr.evName, listener)
+                    }
+
+                    if (typeof v === 'function') {
+                        v = v._bound || v
+                        el.addEventListener(expr.evName, v)
+                        doc.paths[i].listener = v // remember it for next render
+                    }
+
+                    continue
+                }
+
+                // handle flat text
+                if (!expr.attr) {
+                    el.textContent = v || ''
+                    continue
+                }
+
+                // set attributes
+                if (v === undefined) {
+                    el[expr.prop] = undefined
+                } else {
+                    el[expr.prop] = v
+                    if (expr.attr === 'class' && typeof v === 'object') {
+                        if (!Array.isArray(v)) {
+                            v = Object.keys(v).filter(function (k) {
+                                return v[k]
+                            })
+                        }
+
+                        v = v.join(' ')
+                    } else if (expr.attr === 'style' && typeof v === 'object') {
+                        v = Object.keys(v).map(function(k) {
+                            return k + ': ' + v[k]
+                        }).join('; ')
+                    }
+
+                    if (['class', 'style'].indexOf(expr.attr) !== -1) {
+                        if (!v) {
+                            el.removeAttribute(expr.attr)
+                        } else {
+                            el.setAttribute(expr.attr, v)
+                        }
+                    }
+                }
+            }
+            return doc
+        }.bind(this)
+
+        return doc.render(obj)
     }
 }
 
@@ -444,8 +423,7 @@ function pluto(el) {
 }
 
 pluto.Template = Template
-pluto.Renderer = Renderer
-pluto.RepeatRenderer = RepeatRenderer
+pluto.RepeatRenderer = Renderer
 window.pluto = pluto
 })();
 
