@@ -108,8 +108,9 @@ class Template extends HTMLTemplateElement {
     }
 }
 
-class Renderer {
+class Renderer extends DocumentFragment {
     constructor(tpl) {
+        super()
         this.tpl = tpl
         this.elements = []
         this.exprs = tpl.exprs
@@ -122,20 +123,10 @@ class Renderer {
         }
     }
 
-    init() {
-        var doc = new DocumentFragment()
-        doc.render = (obj) => (this.render(obj), doc)
-        doc.remove = () => this.remove()
-
-        this.placeholder = document.createTextNode('')
-        doc.appendChild(this.placeholder)
-
-        return doc
-    }
-
     render(obj) {
-        if (!this._doc) {
-            this._doc = this.init()
+        if (!this.placeholder) {
+            this.placeholder = document.createTextNode('')
+            this.appendChild(this.placeholder)
         }
 
         var items = this.items(obj)[0] || []
@@ -176,7 +167,7 @@ class Renderer {
         }
 
         obj.item = item // restore previous item value.
-        return this._doc
+        return this
     }
 
     _renderOne(obj) {
