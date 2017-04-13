@@ -111,14 +111,14 @@ class Template extends HTMLTemplateElement {
 class Renderer {
     constructor(tpl) {
         this.tpl = tpl
-        this.children = []
+        this.elements = []
         this.exprs = tpl.exprs
         this.items = tpl.items
     }
 
     remove() {
-        while (this.children.length > 0) {
-            this.children.pop().remove()
+        while (this.elements.length > 0) {
+            this.elements.pop().remove()
         }
     }
 
@@ -156,22 +156,22 @@ class Renderer {
         }
 
         // remove obsolete items
-        while (this.children.length > items.length) {
-            this.children.pop().remove()
+        while (this.elements.length > items.length) {
+            this.elements.pop().remove()
         }
 
         // update existing items
-        for (var i = 0; i < this.children.length; i += 1) {
+        for (var i = 0; i < this.elements.length; i += 1) {
             obj.item = items[i]
-            this.children[i].render(obj)
+            this.elements[i].render(obj)
         }
 
         // create new items
-        while (this.children.length < items.length) {
-            var i = this.children.length
+        while (this.elements.length < items.length) {
+            var i = this.elements.length
             obj.item = items[i]
             var doc = this._renderOne(obj)// new Renderer(this.tpl).render(obj)
-            this.children.push(doc)
+            this.elements.push(doc)
             this.placeholder.before(doc)
         }
 
@@ -206,11 +206,11 @@ class Renderer {
 
         // copy the list of generated elements from the template in order
         // to support removals
-        doc.generated = [].map.call(doc.childNodes, child => child)
+        doc.elements = [].map.call(doc.childNodes, child => child)
 
         doc.remove = function() {
-            while(this.generated.length > 0) {
-                this.generated.pop().remove()
+            while(this.elements.length > 0) {
+                this.elements.pop().remove()
             }
         }
 
