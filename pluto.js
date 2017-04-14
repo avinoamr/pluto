@@ -112,6 +112,7 @@ class Renderer extends DocumentFragment {
         super()
         this.tpl = tpl
         this.elements = []
+        this.paths = {}
         this.exprs = tpl.exprs
         this.items = items
 
@@ -120,10 +121,6 @@ class Renderer extends DocumentFragment {
             this.appendChild(this.placeholder)
         } else {
             this.appendChild(document.importNode(this.tpl.content, true))
-
-            // generate hard links from expressions to the generated elements in
-            // order to avoid re-computing them on every render.
-            this.paths = this.exprs.map((e) => ({ el: select(this, e.path) }))
 
             // copy the list of generated elements from the template in order
             // to support removals
@@ -187,8 +184,12 @@ class Renderer extends DocumentFragment {
         var values = this.exprs.eval(obj)
         for (var i = 0 ; i < this.exprs.length ; i += 1) {
             var expr = this.exprs[i]
-            var { el, listener } = this.paths[i]
             var v = values[i]
+
+            // generate hard links from expressions to the generated elements in
+            // order to avoid re-computing them on every render.
+            var { el, listener } = this.paths[i] || (this.paths[i] =
+                { el: select(this, expr.path )})
 
             // event handlers
             if (expr.evName) {
@@ -242,8 +243,7 @@ class Renderer extends DocumentFragment {
                     }
                 }
 
-                el.render(obj)
-                continue
+                var subdoc = el.render(obj)
             }
         }
 
