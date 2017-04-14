@@ -115,6 +115,9 @@ class Renderer extends DocumentFragment {
         this.elements = []
         this.exprs = tpl.exprs
         this.items = tpl.items
+
+        this.placeholder = document.createTextNode('')
+        this.appendChild(this.placeholder)
     }
 
     remove() {
@@ -124,11 +127,6 @@ class Renderer extends DocumentFragment {
     }
 
     render(obj) {
-        if (!this.placeholder) {
-            this.placeholder = document.createTextNode('')
-            this.appendChild(this.placeholder)
-        }
-
         var items = this.items(obj)[0] || []
         var item = obj.item
         if (!Array.isArray(items) && typeof items === 'object') {
