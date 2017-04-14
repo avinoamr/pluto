@@ -188,19 +188,13 @@ class Renderer extends DocumentFragment {
 
             // generate hard links from expressions to the generated elements in
             // order to avoid re-computing them on every render.
-            var { el, listener } = this.paths[i] || (this.paths[i] =
-                { el: select(this, expr.path )})
+            var el = select(this, expr.path)
 
             // event handlers
             if (expr.evName) {
-                if (listener) {
-                    el.removeEventListener(expr.evName, listener)
-                }
-
                 if (typeof v === 'function') {
                     v = v._bound || v
                     el.addEventListener(expr.evName, v)
-                    this.paths[i].listener = v // remember it for next render
                 }
             } else if (!expr.attr) {
                 el.textContent = v || ''
@@ -263,12 +257,20 @@ function maybeUpgrade(el) {
 // Searches for an element from root based on the property-path to the child
 // example: root = <body>, path = childNodes.3.childNode.7. Resolved by walking
 // the path down to the child.
+// NOTE that this function is memoized on the provided root object
 function select(root, path) {
-    var current = root
-    for (var i = 0; current !== undefined && i < path.length; i += 1) {
-        current = current[path[i]]
+    var memo = root._plutoPaths || (root._plutoPaths = {})
+    var pathKey = path.join('.')
+    if (memo[pathKey]) {
+        return memo[pathKey]
     }
-    return current
+
+    var el = root
+    for (var i = 0; el !== undefined && i < path.length; i += 1) {
+        el = el[path[i]]
+    }
+
+    return memo[pathKey] = el
 }
 
 const SNAKE_RE = /-([a-z])/g
