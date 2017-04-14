@@ -123,22 +123,7 @@ class Renderer extends DocumentFragment {
 
             // generate hard links from expressions to the generated elements in
             // order to avoid re-computing them on every render.
-            this.paths = this.exprs.reduce(function (paths, expr, idx) {
-                var el = select(this, expr.path)
-                if (expr.tpl) {
-                    el.render = function(obj) {
-                        delete el.render
-                        var subdoc = pluto(this).render(obj)
-                        this.replaceWith(subdoc)
-                        this.render = subdoc.render.bind(subdoc)
-                        this.remove = subdoc.remove.bind(subdoc)
-                    }
-                }
-
-                paths[idx] = { el }
-
-                return paths
-            }.bind(this), {})
+            this.paths = this.exprs.map((e) => ({ el: select(this, e.path) }))
 
             // copy the list of generated elements from the template in order
             // to support removals
@@ -247,6 +232,16 @@ class Renderer extends DocumentFragment {
 
             // nested template
             if (expr.tpl) {
+                if (!el.render) {
+                    el.render = function(obj) {
+                        delete el.render
+                        var subdoc = pluto(this).render(obj)
+                        this.replaceWith(subdoc)
+                        this.render = subdoc.render.bind(subdoc)
+                        this.remove = subdoc.remove.bind(subdoc)
+                    }
+                }
+
                 el.render(obj)
                 continue
             }
