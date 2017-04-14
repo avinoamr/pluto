@@ -185,9 +185,6 @@ class Renderer extends DocumentFragment {
         for (var i = 0 ; i < this.exprs.length ; i += 1) {
             var expr = this.exprs[i]
             var v = values[i]
-
-            // generate hard links from expressions to the generated elements in
-            // order to avoid re-computing them on every render.
             var el = select(this, expr.path)
 
             // event handlers
