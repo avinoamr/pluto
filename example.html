@@ -14,9 +14,9 @@
                 <template id='in' is='pluto-tpl' if=${show}>
                     <li>${item.toLowerCase()}</li>
                 </template>
-                <template else>
-                    <li>EMPTY!</li>
-                </template>
+            </template>
+            <template else>
+                <li>EMPTY!</li>
             </template>
         </ul>
     </template>
@@ -31,7 +31,7 @@
     }, 500)
 
     setTimeout(function() {
-        doc.render({ show: true, item: 'final', items: ['four', 'five'] })
+        doc.render({ show: true, item: 'final', items: [] })
     }, 1000)
     </script>
 </body>

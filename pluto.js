@@ -88,7 +88,11 @@ class Template extends HTMLTemplateElement {
         var repeat = this.getAttribute('repeat') || this.getAttribute('for')
         if (repeat) {
             var fn = compileExpressions([{ expr: repeat }])
-            clone.items = (obj) => obj.__plutoElse = fn(obj)[0] || []
+            clone.items = function(obj) {
+                var items = fn(obj)[0] || []
+                obj.__plutoElse = items.length > 0
+                return items
+            }
         }
 
         var cond = this.getAttribute('if')
@@ -235,6 +239,8 @@ class Renderer extends DocumentFragment {
             }
         }
 
+        var else_ = obj.__plutoElse
+        obj.__plutoElse = false
         for (var i = 0; i < subtpls.length; i += 1) {
             var el = subtpls[i]
             if (!el.render) {
@@ -249,6 +255,7 @@ class Renderer extends DocumentFragment {
 
             el.render(obj)
         }
+        obj.__plutoElse = else_
 
         return this
     }
