@@ -14,6 +14,9 @@
                 <template id='in' is='pluto-tpl' if=${show}>
                     <li>${item.toLowerCase()}</li>
                 </template>
+                <template else>
+                    <li>EMPTY!</li>
+                </template>
             </template>
         </ul>
     </template>

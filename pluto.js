@@ -88,13 +88,18 @@ class Template extends HTMLTemplateElement {
         var repeat = this.getAttribute('repeat') || this.getAttribute('for')
         if (repeat) {
             var fn = compileExpressions([{ expr: repeat }])
-            clone.items = (obj) => fn(obj)
+            clone.items = (obj) => obj.__plutoElse = fn(obj)[0] || []
         }
 
         var cond = this.getAttribute('if')
         if (cond) {
             var fn = compileExpressions([{ expr: cond }])
-            clone.items = (obj) => fn(obj).map(Boolean)
+            clone.items = (obj) => obj.__plutoElse = Boolean(fn(obj)[0])
+        }
+
+        var else_ = this.hasAttribute('else')
+        if (else_) {
+            clone.items = (obj) => obj.__plutoElse ? [] : [obj]
         }
 
         // we opt to compile the repeat/cond expressions separately than the
@@ -140,7 +145,7 @@ class Renderer extends DocumentFragment {
             return this._renderOne(obj)
         }
 
-        var items = this.items(obj)[0] || []
+        var items = this.items(obj)
         var item = obj.item
         if (!Array.isArray(items) && typeof items === 'object') {
             items = Object.keys(items).map(function(k) {
@@ -183,6 +188,7 @@ class Renderer extends DocumentFragment {
 
     _renderOne(obj) {
         var values = this.exprs.eval(obj)
+        var subtpls = []
         for (var i = 0 ; i < this.exprs.length ; i += 1) {
             var expr = this.exprs[i]
             var v = values[i]
@@ -225,18 +231,23 @@ class Renderer extends DocumentFragment {
 
             // nested template
             if (expr.tpl) {
-                if (!el.render) {
-                    el.render = function(obj) {
-                        delete el.render
-                        var subdoc = pluto(this).render(obj)
-                        this.replaceWith(subdoc)
-                        this.render = subdoc.render.bind(subdoc)
-                        this.remove = subdoc.remove.bind(subdoc)
-                    }
-                }
-
-                var subdoc = el.render(obj)
+                subtpls.push(el)
             }
+        }
+
+        for (var i = 0; i < subtpls.length; i += 1) {
+            var el = subtpls[i]
+            if (!el.render) {
+                el.render = function(obj) {
+                    delete el.render
+                    var subdoc = pluto(this).render(obj)
+                    this.replaceWith(subdoc)
+                    this.render = subdoc.render.bind(subdoc)
+                    this.remove = subdoc.remove.bind(subdoc)
+                }
+            }
+
+            el.render(obj)
         }
 
         return this
