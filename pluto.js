@@ -200,9 +200,15 @@ class Renderer extends DocumentFragment {
 
             // event handlers
             if (expr.evName) {
+                var evs = el.__plutoEvs || (el.__plutoEvs = {})
+                if (evs[expr.evName]) {
+                    el.removeEventListener(expr.evName, evs[expr.evName])
+                }
+
                 if (typeof v === 'function') {
                     v = v._bound || v
                     el.addEventListener(expr.evName, v)
+                    evs[expr.evName] = v
                 }
             } else if (!expr.attr) {
                 el.textContent = v || ''
