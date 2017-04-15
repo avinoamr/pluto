@@ -210,20 +210,6 @@ class Renderer extends DocumentFragment {
                 el[expr.prop] = undefined
             } else {
                 el[expr.prop] = v
-                if (expr.attr === 'class' && typeof v === 'object') {
-                    if (!Array.isArray(v)) {
-                        v = Object.keys(v).filter(function (k) {
-                            return v[k]
-                        })
-                    }
-
-                    v = v.join(' ')
-                } else if (expr.attr === 'style' && typeof v === 'object') {
-                    v = Object.keys(v).map(function(k) {
-                        return k + ': ' + v[k]
-                    }).join('; ')
-                }
-
                 if (['class', 'style'].indexOf(expr.attr) !== -1) {
                     if (!v) {
                         el.removeAttribute(expr.attr)
@@ -310,7 +296,12 @@ function compileExpressions(exprs) {
             refs = refs.concat(getIdentifiers(expr.expr))
         }
 
-        return `arguments[0][${i}] = this.__plutoT\`${expr.expr}\``
+        var tagFn = ({
+            'class': 'classNameT',
+            'style': 'styleT'
+        })[expr.attr] || 'this.__plutoT'
+
+        return `arguments[0][${i}] = ${tagFn}\`${expr.expr}\``
     }).join(';\n')
 
     var keys = refs.reduce((keys, k) => (keys[k] = true, keys), {})
@@ -341,6 +332,26 @@ function compileExpressions(exprs) {
         }
 
         return v
+    }
+
+    function classNameT(s, v) {
+        if (typeof v === 'object') {
+            if (!Array.isArray(v)) {
+                v = Object.keys(v).filter((k) => v[k])
+            }
+
+            return v.join(' ')
+        }
+
+        return String.raw.apply(null, arguments)
+    }
+
+    function styleT(s, v) {
+        if (typeof v === 'object') {
+            return Object.keys(v).map((k) => k + ':' + v[k]).join('; ')
+        }
+
+        return String.raw.apply(null, arguments)
     }
 }
 
