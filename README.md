@@ -97,7 +97,7 @@ same can be applied to event listeners with `on:click={{onClick}}`.
 Consider the following relationships between properties and attributes:
 
 ATTR            PROP
---------------------
+-------------------------
 class           className
 style           style
 id              id
@@ -189,3 +189,21 @@ Out of all of these - I think I prefer a mix of both options:
 So in the final design, you mark event listeners with the `on-` prefix, but you
 can pass in actual functions. We'll then bind these functions as event
 listeners.
+
+# TO BE CONSIDERED
+- Supports if and repeat (`if=${}`, `for=${}` respectively) on individual
+elements: `<div if=${} for=${}>`
+- Syntax for JS `for-in` and `for-of` in expressions like:
+`<div for=${idx of items}>${items[idx]}</div>`
+- Documentation editable via the console. This is cool.
+- Two-way binding of input fields.
+- `class MyComponent extends Pluto.Component('my-component') {}`
+- Uses attribute namespaces like `on:click` and `bind:href`
+- Auto-add vendor-specific prefixes to style elements
+- Supports if- and else- in individual elements and in templates.
+- Event modifiers like `on-click-right=${}` or `on-key-ctrl-A=${}`
+- Transition classes when elements are added/removed. Maybe with `on-add` and
+`on-remove`.
+- Bound the `RenderableFragment` object to the generated template such that
+setting properties on it will update the rendering:
+`var doc = tpl.render({ message: 'hello' }); doc.message = 'world'`

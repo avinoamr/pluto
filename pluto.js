@@ -85,15 +85,16 @@ class Template extends HTMLTemplateElement {
             }
         }, this)
 
-        var repeat = this.getAttribute('repeat')
+        var repeat = this.getAttribute('repeat') || this.getAttribute('for')
         if (repeat) {
-            clone.items = compileExpressions([{ expr: repeat }])
+            var fn = compileExpressions([{ expr: repeat }])
+            clone.items = (obj) => fn(obj)
         }
 
         var cond = this.getAttribute('if')
         if (cond) {
-            var items = compileExpressions([{ expr: cond }])
-            clone.items = (obj) => items(obj).map(Boolean) // coerce to bool
+            var fn = compileExpressions([{ expr: cond }])
+            clone.items = (obj) => fn(obj).map(Boolean)
         }
 
         // we opt to compile the repeat/cond expressions separately than the
