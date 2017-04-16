@@ -66,7 +66,7 @@ class Template extends HTMLTemplateElement {
                                 evs[evName] = v
                             }
                         }
-                    } else if (['style', 'class'].indexOf(attr)) {
+                    } else if (['style', 'class'].indexOf(attr) !== -1) {
                         var render = (el, v) => v
                             ? el.setAttribute(attr, v)
                             : el.removeAttribute(attr)
