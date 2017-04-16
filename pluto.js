@@ -41,7 +41,8 @@ class Template extends HTMLTemplateElement {
             if (el.nodeName === '#text') {
                 var expr = isExpressions(el.textContent)
                 if (expr) {
-                    exprs.push({ expr, path })
+                    var render = (el, v) => (el.textContent = v || '')
+                    exprs.push({expr, path, render })
                 }
             }
 
@@ -53,10 +54,35 @@ class Template extends HTMLTemplateElement {
                     var evName, prop
                     if (attr.startsWith('on-')) {
                         evName = attr.slice(3)
+                        var render = function(el, v) {
+                            var evs = el.__plutoEvs || (el.__plutoEvs = {})
+                            if (evs[evName]) {
+                                el.removeEventListener(evName, evs[evName])
+                            }
+
+                            if (typeof v === 'function') {
+                                v = v._bound || v
+                                el.addEventListener(evName, v)
+                                evs[evName] = v
+                            }
+                        }
                     } else {
                         prop = snakeToCamelCase(attr)
+                        if (prop === 'class') {
+                            prop = 'className'
+                        }
+
+                        var setAttr = ['style'].indexOf(attr) !== -1
+                        var render = function(el, v) {
+                            el[prop] = v
+                            if (setAttr) {
+                                v ? el.setAttribute(attr, v)
+                                    : el.removeAttribute(attr)
+                            }
+                        }
                     }
-                    exprs.push({ expr, path, attr, evName, prop })
+
+                    exprs.push({ expr, path, attr, evName, prop, render })
                 }
             }, this)
 
@@ -201,36 +227,10 @@ class Renderer extends DocumentFragment {
             var v = values[i]
             var el = select(this, expr.path)
 
-            // event handlers
-            if (expr.evName) {
-                var evs = el.__plutoEvs || (el.__plutoEvs = {})
-                if (evs[expr.evName]) {
-                    el.removeEventListener(expr.evName, evs[expr.evName])
-                }
-
-                if (typeof v === 'function') {
-                    v = v._bound || v
-                    el.addEventListener(expr.evName, v)
-                    evs[expr.evName] = v
-                }
-            } else if (!expr.attr) {
-                el.textContent = v || ''
-            } else if (v === undefined) {
-                el[expr.prop] = undefined
-            } else {
-                el[expr.prop] = v
-                if (['class', 'style'].indexOf(expr.attr) !== -1) {
-                    if (!v) {
-                        el.removeAttribute(expr.attr)
-                    } else {
-                        el.setAttribute(expr.attr, v)
-                    }
-                }
-            }
-
-            // nested template
             if (expr.tpl) {
                 subtpls.push(el)
+            } else {
+                expr.render(el, v)
             }
         }
 
