@@ -56,14 +56,9 @@ class Template extends HTMLTemplateElement {
                         evName = attr.slice(3)
                         var render = function(el, v) {
                             var evs = el.__plutoEvs || (el.__plutoEvs = {})
-                            if (evs[evName]) {
+                            if (evs[evName] !== v) {
                                 el.removeEventListener(evName, evs[evName])
-                            }
-
-                            if (typeof v === 'function') {
-                                v = v._bound || v
-                                el.addEventListener(evName, v)
-                                evs[evName] = v
+                                el.addEventListener(evName, evs[evName] = v)
                             }
                         }
                     } else if (['style', 'class'].indexOf(attr) !== -1) {
