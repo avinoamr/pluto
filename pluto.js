@@ -66,20 +66,13 @@ class Template extends HTMLTemplateElement {
                                 evs[evName] = v
                             }
                         }
+                    } else if (['style', 'class'].indexOf(attr)) {
+                        var render = (el, v) => v
+                            ? el.setAttribute(attr, v)
+                            : el.removeAttribute(attr)
                     } else {
                         prop = snakeToCamelCase(attr)
-                        if (prop === 'class') {
-                            prop = 'className'
-                        }
-
-                        var setAttr = ['style'].indexOf(attr) !== -1
-                        var render = function(el, v) {
-                            el[prop] = v
-                            if (setAttr) {
-                                v ? el.setAttribute(attr, v)
-                                    : el.removeAttribute(attr)
-                            }
-                        }
+                        var render = (el, v) => el[prop] = v
                     }
 
                     exprs.push({ expr, path, attr, evName, prop, render })
