@@ -1,5 +1,6 @@
 # pluto
-Native HTML Template Rendering
+<template> tags and Template Literals - combined within a tiny dwarf-library to
+make rendering HTML quick, easy and (almost) bare-bones.
 
 ## Placeholder insertion points
 External templates (ones that the user called '.render()' on explicitly) are
