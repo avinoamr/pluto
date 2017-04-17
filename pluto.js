@@ -240,13 +240,6 @@ class Renderer extends DocumentFragment {
 
 // -- HELPER FUNCTIONS
 
-function maybeUpgrade(el) {
-    // don't match #text, #comment, etc.
-    if (el.nodeName[0] !== '#' && el.matches('template')) {
-        pluto(el) // auto-upgrade nested templates.
-    }
-}
-
 // Searches for an element from root based on the property-path to the child
 // example: root = <body>, path = childNodes.3.childNode.7. Resolved by walking
 // the path down to the child.
