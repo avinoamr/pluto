@@ -44,7 +44,8 @@ class Template extends HTMLTemplateElement {
 
     compile() {
         var exprs = []
-        var elements = [{ el: this.content, path: [] }]
+        var clone = this.cloneNode(true)
+        var elements = [{ el: clone.content, path: [] }]
         while (elements.length > 0) {
             var { el, path } = elements.shift()
 
@@ -52,37 +53,46 @@ class Template extends HTMLTemplateElement {
             if (el.nodeName === '#text') {
                 var expr = isExpressions(el.textContent)
                 if (expr) {
+                    el.textContent = ''
                     var render = (el, v) => (el.textContent = v || '')
-                    exprs.push({expr, path, render })
+                    exprs.push({ expr, path, render })
                 }
             }
 
             // attributes
-            [].forEach.call(el.attributes || [], function(attr) {
+            Array.from(el.attributes || []).forEach(function(attr) {
                 var expr = isExpressions(attr.value)
-                if (expr !== null) {
-                    attr = attr.name
-                    var evName, prop
-                    if (attr.startsWith('on-')) {
-                        evName = attr.slice(3)
-                        var render = function(el, v) {
-                            var evs = el.__plutoEvs || (el.__plutoEvs = {})
-                            if (evs[evName] !== v) {
-                                el.removeEventListener(evName, evs[evName])
-                                el.addEventListener(evName, evs[evName] = v)
-                            }
-                        }
-                    } else if (['style', 'class'].indexOf(attr) !== -1) {
-                        var render = (el, v) => v
-                            ? el.setAttribute(attr, v)
-                            : el.removeAttribute(attr)
-                    } else {
-                        prop = snakeToCamelCase(attr)
-                        var render = (el, v) => el[prop] = v
-                    }
-
-                    exprs.push({ expr, path, attr, evName, prop, render })
+                if (expr === null) {
+                    return
                 }
+
+                // avoid having the attribute on import as it might arrive
+                // un-rendered to web-components. NB: this means that the
+                // constructor of elements wouldn't have access to the rendered
+                // values initially. Perhaps we should initially render into a
+                // clone before finally importing.
+                el.removeAttribute(attr.name)
+                attr = attr.name
+                var evName, prop
+                if (attr.startsWith('on-')) {
+                    evName = attr.slice(3)
+                    var render = function(el, v) {
+                        var evs = el.__plutoEvs || (el.__plutoEvs = {})
+                        if (evs[evName] !== v) {
+                            el.removeEventListener(evName, evs[evName])
+                            el.addEventListener(evName, evs[evName] = v)
+                        }
+                    }
+                } else if (['style', 'class'].indexOf(attr) !== -1) {
+                    var render = (el, v) => v
+                        ? el.setAttribute(attr, v)
+                        : el.removeAttribute(attr)
+                } else {
+                    prop = snakeToCamelCase(attr)
+                    var render = (el, v) => el[prop] = v
+                }
+
+                exprs.push({ expr, path, attr, evName, prop, render })
             }, this)
 
             // children, enqueue.
@@ -90,10 +100,7 @@ class Template extends HTMLTemplateElement {
                 maybeUpgrade(el)
                 var subpath = path.concat(['childNodes', i])
                 if (el instanceof Template) {
-                    var render = function(el, _, obj) {
-                        pluto(el)._renderIn(obj, el)
-                    }
-
+                    var render = (el, _, obj) => pluto(el)._renderIn(obj, el)
                     exprs.push({ path: subpath, tpl: true, render })
                     return
                 }
@@ -101,18 +108,6 @@ class Template extends HTMLTemplateElement {
                 elements.push({ el, path: subpath })
             })
         }
-
-        // remove attributes or expressions before rendering in order to hide
-        // the placeholder expressions from the constructor of custom elements.
-        var clone = this.cloneNode(true)
-        exprs.forEach(function(expr) {
-            var el = select(clone.content, expr.path)
-            if (!expr.attr) {
-                el.textContent = ''
-            } else {
-                el.removeAttribute(expr.attr)
-            }
-        }, this)
 
         var repeat = this.getAttribute('repeat') || this.getAttribute('for')
         if (repeat) {
@@ -241,9 +236,7 @@ class Renderer extends DocumentFragment {
         obj.__plutoElse = false
         for (var i = 0; i < subtpls.length; i += 1) {
             var { el, expr } = subtpls[i]
-            if (expr.render) {
-                expr.render(el, undefined, obj)
-            }
+            expr.render(el, undefined, obj)
         }
         obj.__plutoElse = else_
 
