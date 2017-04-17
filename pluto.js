@@ -31,6 +31,17 @@ class Template extends HTMLTemplateElement {
         return new Renderer(compiled, compiled.items).render(obj)
     }
 
+    _renderIn(obj, el) {
+        if (el.__plutoRenderer) {
+            el.__plutoRenderer.render(obj)
+        } else {
+            var doc = this.render(obj)
+            el.replaceWith(doc)
+            el.__plutoRenderer = doc
+            el.remove = doc.remove.bind(doc)
+        }
+    }
+
     compile() {
         var exprs = []
         var elements = [{ el: this.content, path: [] }]
@@ -79,7 +90,11 @@ class Template extends HTMLTemplateElement {
                 maybeUpgrade(el)
                 var subpath = path.concat(['childNodes', i])
                 if (el instanceof Template) {
-                    exprs.push({ path: subpath, tpl: true })
+                    var render = function(el, _, obj) {
+                        pluto(el)._renderIn(obj, el)
+                    }
+
+                    exprs.push({ path: subpath, tpl: true, render })
                     return
                 }
 
@@ -216,7 +231,7 @@ class Renderer extends DocumentFragment {
             var el = select(this, expr.path)
 
             if (expr.tpl) {
-                subtpls.push(el)
+                subtpls.push({ el, expr })
             } else {
                 expr.render(el, v)
             }
@@ -225,18 +240,10 @@ class Renderer extends DocumentFragment {
         var else_ = obj.__plutoElse
         obj.__plutoElse = false
         for (var i = 0; i < subtpls.length; i += 1) {
-            var el = subtpls[i]
-            if (!el.render) {
-                el.render = function(obj) {
-                    delete el.render
-                    var subdoc = pluto(this).render(obj)
-                    this.replaceWith(subdoc)
-                    this.render = subdoc.render.bind(subdoc)
-                    this.remove = subdoc.remove.bind(subdoc)
-                }
+            var { el, expr } = subtpls[i]
+            if (expr.render) {
+                expr.render(el, undefined, obj)
             }
-
-            el.render(obj)
         }
         obj.__plutoElse = else_
 
