@@ -221,28 +221,19 @@ class Renderer extends DocumentFragment {
     }
 
     _renderOne(obj) {
+        var else_ = obj.__plutoElse
+        obj.__plutoElse = false
+
         var values = this.exprs.eval(obj)
         var subtpls = []
         for (var i = 0 ; i < this.exprs.length ; i += 1) {
             var expr = this.exprs[i]
             var el = this.paths[i]
             var v = values[i]
-
-            if (expr.tpl) {
-                subtpls.push({ el, expr })
-            } else {
-                expr.render(el, v)
-            }
+            expr.render(el, v, obj)
         }
 
-        var else_ = obj.__plutoElse
-        obj.__plutoElse = false
-        for (var i = 0; i < subtpls.length; i += 1) {
-            var { el, expr } = subtpls[i]
-            expr.render(el, undefined, obj)
-        }
         obj.__plutoElse = else_
-
         return this
     }
 }
