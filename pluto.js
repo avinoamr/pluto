@@ -55,7 +55,7 @@ class Template extends HTMLTemplateElement {
                 // with the trade-off of not supporting a mixture of template
                 // libraries.
                 var render = (el, _, obj) => pluto(el)._renderIn(obj, el)
-                exprs.push({ path: path, tpl: true, render })
+                exprs.push({ path, render })
                 continue
             }
 
