@@ -49,6 +49,16 @@ class Template extends HTMLTemplateElement {
         while (elements.length > 0) {
             var { el, path } = elements.shift()
 
+            if (el.localName === 'template') {
+                // nested templates are coerced to Pluto Templates. This
+                // prevents the need to repeatedly mark templates with pluto-tpl
+                // with the trade-off of not supporting a mixture of template
+                // libraries.
+                var render = (el, _, obj) => pluto(el)._renderIn(obj, el)
+                exprs.push({ path: path, tpl: true, render })
+                continue
+            }
+
             // inner content expressions
             if (el.nodeName === '#text') {
                 var expr = isExpressions(el.textContent)
@@ -95,17 +105,9 @@ class Template extends HTMLTemplateElement {
                 exprs.push({ expr, path, attr, evName, prop, render })
             }, this)
 
-            // children, enqueue.
+            // enqueue children
             el.childNodes.forEach(function(el, i) {
-                maybeUpgrade(el)
-                var subpath = path.concat(['childNodes', i])
-                if (el instanceof Template) {
-                    var render = (el, _, obj) => pluto(el)._renderIn(obj, el)
-                    exprs.push({ path: subpath, tpl: true, render })
-                    return
-                }
-
-                elements.push({ el, path: subpath })
+                elements.push({ el, path: path.concat(['childNodes', i]) })
             })
         }
 
