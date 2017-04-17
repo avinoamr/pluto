@@ -164,6 +164,7 @@ class Renderer extends DocumentFragment {
             // copy the list of generated elements from the template in order
             // to support removals
             this.elements = [].map.call(this.childNodes, child => child)
+            this.paths = this.exprs.map((expr) => select(this, expr.path))
         }
     }
 
@@ -224,8 +225,8 @@ class Renderer extends DocumentFragment {
         var subtpls = []
         for (var i = 0 ; i < this.exprs.length ; i += 1) {
             var expr = this.exprs[i]
+            var el = this.paths[i]
             var v = values[i]
-            var el = select(this, expr.path)
 
             if (expr.tpl) {
                 subtpls.push({ el, expr })
@@ -258,20 +259,12 @@ function maybeUpgrade(el) {
 // Searches for an element from root based on the property-path to the child
 // example: root = <body>, path = childNodes.3.childNode.7. Resolved by walking
 // the path down to the child.
-// NOTE that this function is memoized on the provided root object
 function select(root, path) {
-    var memo = root._plutoPaths || (root._plutoPaths = {})
-    var pathKey = path.join('.')
-    if (memo[pathKey]) {
-        return memo[pathKey]
-    }
-
     var el = root
     for (var i = 0; el !== undefined && i < path.length; i += 1) {
         el = el[path[i]]
     }
-
-    return memo[pathKey] = el
+    return el
 }
 
 const SNAKE_RE = /-([a-z])/g
