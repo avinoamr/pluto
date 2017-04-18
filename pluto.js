@@ -114,9 +114,7 @@ class Template extends HTMLTemplateElement {
         var repeat = this.getAttribute('repeat') || this.getAttribute('for')
         if (repeat) {
             clone.items = function(fn, obj) {
-                var items = fn(obj)[0] || []
-                obj.__plutoElse = items.length > 0
-                return items
+                return fn(obj)[0] || []
             }.bind(clone, compileExpressions([{ expr: repeat }]))
         }
 
@@ -124,7 +122,7 @@ class Template extends HTMLTemplateElement {
         var cond = this.getAttribute('if') || elseIf
         if (cond) {
             clone.items = function(fn, obj) {
-                return obj.__plutoElse = Boolean(fn(obj)[0])
+                return Boolean(fn(obj)[0])
             }.bind(clone, compileExpressions([{ expr: cond }]))
         }
 
@@ -196,6 +194,8 @@ class Renderer extends DocumentFragment {
             items = new Array(items) // range-items, repeat N times.
             items = Array.from(items).map(() => item)
         }
+
+        obj.__plutoElse = items && items.length > 0
 
         // remove obsolete items
         while (this.elements.length > items.length) {
