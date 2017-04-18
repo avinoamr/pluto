@@ -88,26 +88,11 @@ class Template extends HTMLTemplateElement {
             }
         }
 
-        if (!el.getAttribute) {
-            return exprs
-        }
-
-        var for_ = isExpressions(el.getAttribute('for'))
-        if (for_) {
-            el.removeAttribute('for')
-            el.replaceWith(document.createTextNode(''))
-
-            var res = this.compile(el.content || el)
-            var render = this._renderItems(res.content, res.exprs)
-            exprs.push({ expr: for_, path, render })
-            return exprs
-        }
-
         // attributes
-        Array.from(el.attributes || []).forEach(function(attr) {
+        for (var attr of el.attributes || []) {
             var expr = isExpressions(attr.value)
             if (expr === null) {
-                return
+                continue
             }
 
             attr = attr.name
@@ -128,8 +113,7 @@ class Template extends HTMLTemplateElement {
             // values initially. Perhaps we should initially render into a
             // clone before finally importing.
             el.removeAttribute(attr)
-        }, this)
-
+        }
 
         return exprs
     }
