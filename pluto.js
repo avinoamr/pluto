@@ -278,8 +278,16 @@ function compileExpressions(exprs) {
         return `arguments[0][${i}] = ${tagFn}\`${expr.expr}\``
     }).join(';\n')
 
+    // define the local variables and bind root-level functions to the provided
+    // rendered object.
     var keys = refs.reduce((keys, k) => (keys[k] = true, keys), {})
-    var locals = `var { ${Object.keys(keys)} } = this`
+    var locals = Object.keys(keys).map(function (k) {
+        return `
+            var ${k} = this["${k}"];
+            typeof ${k} === 'function' && (${k} = bindFn(this, ${k}))
+        `
+    }).join(';\n')
+
     var fn = eval('(function () {\n' + locals + '\n' + code + '\n})')
     return function(obj) {
         var res = []
@@ -293,19 +301,20 @@ function compileExpressions(exprs) {
         return res
     }
 
+    function bindFn(obj, fn) {
+        var bound = fn.__plutoBound || (fn.__plutoBound = {})
+        if (bound.to !== obj) {
+            bound.to = obj
+            bound.fn = fn.bind(obj)
+        }
+
+        return bound.fn
+    }
+
     function T(s, v) {
-        if (arguments.length > 2 || typeof v === 'string') {
-            return String.raw.apply(null, arguments)
-        }
-
-        if (typeof v === 'function' && this[v.name] === v) {
-            if (v._plutoBound !== this) {
-                v._plutoBound = v.bind(this)
-            }
-            return v._plutoBound
-        }
-
-        return v
+        return arguments.length > 2 || typeof v === 'string'
+            ? String.raw.apply(null, arguments)
+            : v
     }
 
     function classNameT(s, v) {
