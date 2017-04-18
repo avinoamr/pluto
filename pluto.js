@@ -27,7 +27,13 @@
  */
 class Template extends HTMLTemplateElement {
     render(obj) {
-        var { content, exprs, items } = this.compile()
+        var compiled = this._compiled || (this._compiled = {})
+        if (compiled.html !== this.innerHTML) { // recompile
+            // console.log('RECOMPILE', this) // bad - nested cloned templates are re-compiled on every item
+            Object.assign(compiled, this.compile(), { html: this.innerHTML })
+        }
+
+        var { content, exprs, items } = compiled
         return new Renderer(content, exprs, items).render(obj)
     }
 
@@ -137,7 +143,7 @@ class Template extends HTMLTemplateElement {
         // expressions list.
         // NB: It might not be that beneficial for cond though.
         clone.exprs = Object.assign(exprs, { eval: compileExpressions(exprs) })
-        return clone
+        return { content: clone.content, exprs: clone.exprs, items: clone.items }
     }
 }
 
