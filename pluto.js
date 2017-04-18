@@ -51,6 +51,30 @@ class Template extends HTMLTemplateElement {
         }
     }
 
+    compile(content) {
+        var exprs = []
+        var elements = [{ el: content, path: [] }]
+        while (elements.length > 0) {
+            var { el, path } = elements.shift()
+
+            exprs = exprs.concat(this._compileEl(el, path))
+
+            // enqueue children
+            el.childNodes.forEach(function(el, i) {
+                elements.push({ el, path: path.concat(['childNodes', i]) })
+            })
+        }
+
+        // we opt to compile the repeat/cond expressions separately than the
+        // rest of this template - because (a) the template might relay on a
+        // repeated ${item} property that doesn't yet exist in the repeat
+        // expression, and (b) it's must smaller/faster than the complete
+        // expressions list.
+        // NB: It might not be that beneficial for cond though.
+        exprs = Object.assign(exprs, { eval: compileExpressions(exprs) })
+        return { content, exprs }
+    }
+
     _compileEl(el, path) {
         var exprs = []
 
@@ -86,53 +110,28 @@ class Template extends HTMLTemplateElement {
                 return
             }
 
+            attr = attr.name
+            var render
+            if (attr.startsWith('on-')) {
+                render = this._renderBindEvent(attr.slice(3))
+            } else if (['style', 'class'].indexOf(attr) !== -1) {
+                render = this._renderAttr(attr)
+            } else {
+                render = this._renderProp(snakeToCamelCase(attr))
+            }
+
+            exprs.push({ expr, path, attr, render })
+
             // avoid having the attribute on import as it might arrive
             // un-rendered to web-components. NB: this means that the
             // constructor of elements wouldn't have access to the rendered
             // values initially. Perhaps we should initially render into a
             // clone before finally importing.
-            el.removeAttribute(attr.name)
-            attr = attr.name
-            var evName, prop
-            if (attr.startsWith('on-')) {
-                evName = attr.slice(3)
-                var render = this._renderBindEvent(evName)
-            } else if (['style', 'class'].indexOf(attr) !== -1) {
-                var render = this._renderAttr(attr)
-            } else {
-                prop = snakeToCamelCase(attr)
-                var render = this._renderProp(prop)
-            }
-
-            exprs.push({ expr, path, attr, evName, prop, render })
+            el.removeAttribute(attr)
         }, this)
 
 
         return exprs
-    }
-
-    compile(content) {
-        var exprs = []
-        var elements = [{ el: content, path: [] }]
-        while (elements.length > 0) {
-            var { el, path } = elements.shift()
-
-            exprs = exprs.concat(this._compileEl(el, path))
-
-            // enqueue children
-            el.childNodes.forEach(function(el, i) {
-                elements.push({ el, path: path.concat(['childNodes', i]) })
-            })
-        }
-
-        // we opt to compile the repeat/cond expressions separately than the
-        // rest of this template - because (a) the template might relay on a
-        // repeated ${item} property that doesn't yet exist in the repeat
-        // expression, and (b) it's must smaller/faster than the complete
-        // expressions list.
-        // NB: It might not be that beneficial for cond though.
-        exprs = Object.assign(exprs, { eval: compileExpressions(exprs) })
-        return { content, exprs }
     }
 
     _renderBindEvent(evName) {
