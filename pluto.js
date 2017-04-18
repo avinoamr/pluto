@@ -30,7 +30,10 @@ class Template extends HTMLTemplateElement {
         var compiled = this._compiled || (this._compiled = {})
         if (compiled.html !== this.innerHTML) { // recompile
             // console.log('RECOMPILE', this) // bad - nested cloned templates are re-compiled on every item
-            Object.assign(compiled, this.compile(), { html: this.innerHTML })
+            var content = this.cloneNode(true).content
+            Object.assign(compiled, this.compile(content), {
+                html: this.innerHTML
+            })
         }
 
         var { content, exprs, items } = compiled
@@ -48,10 +51,10 @@ class Template extends HTMLTemplateElement {
         }
     }
 
-    compile() {
+    compile(content) {
         var exprs = []
         var clone = this.cloneNode(true)
-        var elements = [{ el: clone.content, path: [] }]
+        var elements = [{ el: content, path: [] }]
         while (elements.length > 0) {
             var { el, path } = elements.shift()
 
@@ -117,23 +120,24 @@ class Template extends HTMLTemplateElement {
             })
         }
 
+        var items
         var repeat = this.getAttribute('repeat') || this.getAttribute('for')
         if (repeat) {
             repeat = compileExpressions([{ expr: repeat }])
-            clone.items = (obj) => repeat(obj)[0] || []
+            items = (obj) => repeat(obj)[0] || []
         }
 
         var elseIf = this.getAttribute('else-if')
         var cond = this.getAttribute('if') || elseIf
         if (cond) {
             cond = compileExpressions([{ expr: cond }])
-            clone.items = (obj) => Boolean(cond(obj)[0])
+            items = (obj) => Boolean(cond(obj)[0])
         }
 
         var else_ = this.hasAttribute('else') || elseIf
         if (else_) {
             var else_ = clone.items || Array
-            clone.items = (obj) => obj.__plutoElse ? [] : else_(obj)
+            items = (obj) => obj.__plutoElse ? [] : else_(obj)
         }
 
         // we opt to compile the repeat/cond expressions separately than the
@@ -142,8 +146,8 @@ class Template extends HTMLTemplateElement {
         // expression, and (b) it's must smaller/faster than the complete
         // expressions list.
         // NB: It might not be that beneficial for cond though.
-        clone.exprs = Object.assign(exprs, { eval: compileExpressions(exprs) })
-        return { content: clone.content, exprs: clone.exprs, items: clone.items }
+        exprs = Object.assign(exprs, { eval: compileExpressions(exprs) })
+        return { content, exprs, items }
     }
 }
 
