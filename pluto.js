@@ -51,127 +51,78 @@ class Template extends HTMLTemplateElement {
         }
     }
 
+    _compileEl(el, path) {
+        var exprs = []
+
+        // inner content expressions
+        if (el.nodeName === '#text') {
+            var expr = isExpressions(el.textContent)
+            if (expr) {
+                el.textContent = ''
+                var render = (el, v) => (el.textContent = v || '')
+                exprs.push({ expr, path, render })
+            }
+        }
+
+        if (!el.getAttribute) {
+            return exprs
+        }
+
+        var for_ = isExpressions(el.getAttribute('for'))
+        if (for_) {
+            el.removeAttribute('for')
+            el.replaceWith(document.createTextNode(''))
+
+            var res = this.compile(el.content || el)
+            var render = this._renderItems(res.content, res.exprs)
+            exprs.push({ expr: for_, path, render })
+            return exprs
+        }
+
+        // attributes
+        Array.from(el.attributes || []).forEach(function(attr) {
+            var expr = isExpressions(attr.value)
+            if (expr === null) {
+                return
+            }
+
+            // avoid having the attribute on import as it might arrive
+            // un-rendered to web-components. NB: this means that the
+            // constructor of elements wouldn't have access to the rendered
+            // values initially. Perhaps we should initially render into a
+            // clone before finally importing.
+            el.removeAttribute(attr.name)
+            attr = attr.name
+            var evName, prop
+            if (attr.startsWith('on-')) {
+                evName = attr.slice(3)
+                var render = this._renderBindEvent(evName)
+            } else if (['style', 'class'].indexOf(attr) !== -1) {
+                var render = this._renderAttr(attr)
+            } else {
+                prop = snakeToCamelCase(attr)
+                var render = this._renderProp(prop)
+            }
+
+            exprs.push({ expr, path, attr, evName, prop, render })
+        }, this)
+
+
+        return exprs
+    }
+
     compile(content) {
         var exprs = []
-        var clone = this.cloneNode(true)
         var elements = [{ el: content, path: [] }]
         while (elements.length > 0) {
             var { el, path } = elements.shift()
 
-            // if (el.localName === 'template') {
-            //     // nested templates are coerced to Pluto Templates. This
-            //     // prevents the need to repeatedly mark templates with pluto-tpl
-            //     // with the trade-off of not supporting a mixture of template
-            //     // libraries.
-            //     var render = (el, _, obj) => pluto(el)._renderIn(obj, el)
-            //     exprs.push({ path, render })
-            //     continue
-            // }
-
-            // inner content expressions
-            if (el.nodeName === '#text') {
-                var expr = isExpressions(el.textContent)
-                if (expr) {
-                    el.textContent = ''
-                    var render = (el, v) => (el.textContent = v || '')
-                    exprs.push({ expr, path, render })
-                }
-            }
-
-            var for_ = el.getAttribute && isExpressions(el.getAttribute('for'))
-            if (for_) {
-                el.removeAttribute('for')
-                var res = this.compile(el.content || el)
-                el.replaceWith(document.createTextNode(''))
-
-                var render = function(el, items, obj) {
-                    el.__items || (el.__items = [])
-
-                    // remove obsolete items
-                    while (el.__items.length > items.length) {
-                        el.__items.pop().remove()
-                    }
-
-                    // update existing items
-                    for (var i = 0; i < el.__items.length; i += 1) {
-                        obj.item = items[i]
-                        el.__items[i].render(obj)
-                    }
-
-                    // create new items
-                    while (el.__items.length < items.length) {
-                        var i = el.__items.length
-                        obj.item = items[i]
-                        var doc = new Renderer(this.content, this.exprs).render(obj)
-                        el.__items.push(doc)
-                        el.before(doc)
-                    }
-                }.bind(res)
-
-                exprs.push({ expr: for_, path, render })
-                continue
-            }
-
-            // attributes
-            Array.from(el.attributes || []).forEach(function(attr) {
-                var expr = isExpressions(attr.value)
-                if (expr === null) {
-                    return
-                }
-
-                // avoid having the attribute on import as it might arrive
-                // un-rendered to web-components. NB: this means that the
-                // constructor of elements wouldn't have access to the rendered
-                // values initially. Perhaps we should initially render into a
-                // clone before finally importing.
-                el.removeAttribute(attr.name)
-                attr = attr.name
-                var evName, prop
-                if (attr.startsWith('on-')) {
-                    evName = attr.slice(3)
-                    var render = function(el, v) {
-                        var evs = el.__plutoEvs || (el.__plutoEvs = {})
-                        if (evs[evName] !== v) {
-                            el.removeEventListener(evName, evs[evName])
-                            el.addEventListener(evName, evs[evName] = v)
-                        }
-                    }
-                } else if (['style', 'class'].indexOf(attr) !== -1) {
-                    var render = (el, v) => v
-                        ? el.setAttribute(attr, v)
-                        : el.removeAttribute(attr)
-                } else {
-                    prop = snakeToCamelCase(attr)
-                    var render = (el, v) => el[prop] = v
-                }
-
-                exprs.push({ expr, path, attr, evName, prop, render })
-            }, this)
+            exprs = exprs.concat(this._compileEl(el, path))
 
             // enqueue children
             el.childNodes.forEach(function(el, i) {
                 elements.push({ el, path: path.concat(['childNodes', i]) })
             })
-        }
-
-        var items
-        var repeat = this.getAttribute('repeat') || this.getAttribute('for')
-        if (repeat) {
-            repeat = compileExpressions([{ expr: repeat }])
-            items = (obj) => repeat(obj)[0] || []
-        }
-
-        var elseIf = this.getAttribute('else-if')
-        var cond = this.getAttribute('if') || elseIf
-        if (cond) {
-            cond = compileExpressions([{ expr: cond }])
-            items = (obj) => Boolean(cond(obj)[0])
-        }
-
-        var else_ = this.hasAttribute('else') || elseIf
-        if (else_) {
-            var else_ = clone.items || Array
-            items = (obj) => obj.__plutoElse ? [] : else_(obj)
         }
 
         // we opt to compile the repeat/cond expressions separately than the
@@ -181,8 +132,55 @@ class Template extends HTMLTemplateElement {
         // expressions list.
         // NB: It might not be that beneficial for cond though.
         exprs = Object.assign(exprs, { eval: compileExpressions(exprs) })
-        return { content, exprs, items }
+        return { content, exprs }
     }
+
+    _renderBindEvent(evName) {
+        return function(el, v) {
+            var evs = el.__plutoEvs || (el.__plutoEvs = {})
+            if (evs[evName] !== v) {
+                el.removeEventListener(evName, evs[evName])
+                el.addEventListener(evName, evs[evName] = v)
+            }
+        }
+    }
+
+    _renderAttr(attr) {
+        return (el, v) => v
+            ? el.setAttribute(attr, v)
+            : el.removeAttribute(attr)
+    }
+
+    _renderProp(prop) {
+        return (el, v) => el[prop] = v
+    }
+
+    _renderItems(content, exprs) {
+        return function(el, items, obj) {
+            el.__items || (el.__items = [])
+
+            // remove obsolete items
+            while (el.__items.length > items.length) {
+                el.__items.pop().remove()
+            }
+
+            // update existing items
+            for (var i = 0; i < el.__items.length; i += 1) {
+                obj.item = items[i]
+                el.__items[i].render(obj)
+            }
+
+            // create new items
+            while (el.__items.length < items.length) {
+                var i = el.__items.length
+                obj.item = items[i]
+                var doc = new Renderer(content, exprs).render(obj)
+                el.__items.push(doc)
+                el.before(doc)
+            }
+        }
+    }
+
 }
 
 class Renderer extends DocumentFragment {
