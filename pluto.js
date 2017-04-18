@@ -192,7 +192,7 @@ class Renderer extends DocumentFragment {
             items = Array.from(items).map(() => item)
         }
 
-        obj.__plutoElse = items && items.length > 0
+        obj.__plutoElse = obj.__plutoElse || items && items.length > 0
 
         // remove obsolete items
         while (this.elements.length > items.length) {
