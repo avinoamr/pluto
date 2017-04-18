@@ -266,6 +266,10 @@ function compileExpressions(exprs) {
     var refs = []
     var code = 'this.__plutoT || (this.__plutoT = T.bind(this));\n'
     code += exprs.map(function(expr, i) {
+        if (expr.expr === undefined) {
+            return '' // can happen in nested templates
+        }
+
         if (expr.expr) {
             refs = refs.concat(getIdentifiers(expr.expr))
         }
