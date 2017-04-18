@@ -27,8 +27,8 @@
  */
 class Template extends HTMLTemplateElement {
     render(obj) {
-        var compiled = this.compile()
-        return new Renderer(compiled, compiled.items).render(obj)
+        var { content, exprs, items } = this.compile()
+        return new Renderer(content, exprs, items).render(obj)
     }
 
     _renderIn(obj, el) {
@@ -147,19 +147,20 @@ class Template extends HTMLTemplateElement {
 }
 
 class Renderer extends DocumentFragment {
-    constructor(tpl, items) {
+    constructor(content, exprs, items) {
         super()
-        this.tpl = tpl
+        this.tpl = content
+        this.exprs = exprs
+        this.items = items
+
         this.elements = []
         this.paths = {}
-        this.exprs = tpl.exprs
-        this.items = items
 
         if (items) {
             this.placeholder = document.createTextNode('')
             this.appendChild(this.placeholder)
         } else {
-            this.appendChild(document.importNode(this.tpl.content, true))
+            this.appendChild(document.importNode(this.tpl, true))
 
             // copy the list of generated elements from the template in order
             // to support removals
@@ -211,7 +212,7 @@ class Renderer extends DocumentFragment {
         while (this.elements.length < items.length) {
             var i = this.elements.length
             obj.item = items[i]
-            var doc = new Renderer(this.tpl).render(obj)
+            var doc = new Renderer(this.tpl, this.exprs).render(obj)
             this.elements.push(doc)
             this.placeholder.before(doc)
         }
