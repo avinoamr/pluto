@@ -98,7 +98,7 @@ class Template extends HTMLTemplateElement {
             attr = attr.name
             var render
             if (attr.startsWith('on-')) {
-                render = this._renderBindEvent(attr.slice(3))
+                render = this._renderBindEvent(attr.slice(3)) // trim 'on-'
             } else if (['style', 'class'].indexOf(attr) !== -1) {
                 render = this._renderAttr(attr)
             } else {
@@ -118,14 +118,8 @@ class Template extends HTMLTemplateElement {
         return exprs
     }
 
-    _renderBindEvent(evName) {
-        return function(el, v) {
-            var evs = el.__plutoEvs || (el.__plutoEvs = {})
-            if (evs[evName] !== v) {
-                el.removeEventListener(evName, evs[evName])
-                el.addEventListener(evName, evs[evName] = v)
-            }
-        }
+    _renderProp(prop) {
+        return (el, v) => el[prop] = v
     }
 
     _renderAttr(attr) {
@@ -134,8 +128,14 @@ class Template extends HTMLTemplateElement {
             : el.removeAttribute(attr)
     }
 
-    _renderProp(prop) {
-        return (el, v) => el[prop] = v
+    _renderBindEvent(evName) {
+        return function(el, v) {
+            var evs = el.__plutoEvs || (el.__plutoEvs = {})
+            if (evs[evName] !== v) {
+                el.removeEventListener(evName, evs[evName])
+                el.addEventListener(evName, evs[evName] = v)
+            }
+        }
     }
 
     _renderItems(content, exprs) {
@@ -248,7 +248,6 @@ class Renderer extends DocumentFragment {
         obj.__plutoElse = false
 
         var values = this.exprs.eval(obj)
-        var subtpls = []
         for (var i = 0 ; i < this.exprs.length ; i += 1) {
             var expr = this.exprs[i]
             var el = this.paths[i]
