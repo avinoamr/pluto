@@ -58,15 +58,15 @@ class Template extends HTMLTemplateElement {
         while (elements.length > 0) {
             var { el, path } = elements.shift()
 
-            if (el.localName === 'template') {
-                // nested templates are coerced to Pluto Templates. This
-                // prevents the need to repeatedly mark templates with pluto-tpl
-                // with the trade-off of not supporting a mixture of template
-                // libraries.
-                var render = (el, _, obj) => pluto(el)._renderIn(obj, el)
-                exprs.push({ path, render })
-                continue
-            }
+            // if (el.localName === 'template') {
+            //     // nested templates are coerced to Pluto Templates. This
+            //     // prevents the need to repeatedly mark templates with pluto-tpl
+            //     // with the trade-off of not supporting a mixture of template
+            //     // libraries.
+            //     var render = (el, _, obj) => pluto(el)._renderIn(obj, el)
+            //     exprs.push({ path, render })
+            //     continue
+            // }
 
             // inner content expressions
             if (el.nodeName === '#text') {
@@ -76,6 +76,40 @@ class Template extends HTMLTemplateElement {
                     var render = (el, v) => (el.textContent = v || '')
                     exprs.push({ expr, path, render })
                 }
+            }
+
+            var for_ = el.getAttribute && isExpressions(el.getAttribute('for'))
+            if (for_) {
+                el.removeAttribute('for')
+                var res = this.compile(el.content || el)
+                el.replaceWith(document.createTextNode(''))
+
+                var render = function(el, items, obj) {
+                    el.__items || (el.__items = [])
+
+                    // remove obsolete items
+                    while (el.__items.length > items.length) {
+                        el.__items.pop().remove()
+                    }
+
+                    // update existing items
+                    for (var i = 0; i < el.__items.length; i += 1) {
+                        obj.item = items[i]
+                        el.__items[i].render(obj)
+                    }
+
+                    // create new items
+                    while (el.__items.length < items.length) {
+                        var i = el.__items.length
+                        obj.item = items[i]
+                        var doc = new Renderer(this.content, this.exprs).render(obj)
+                        el.__items.push(doc)
+                        el.before(doc)
+                    }
+                }.bind(res)
+
+                exprs.push({ expr: for_, path, render })
+                continue
             }
 
             // attributes
