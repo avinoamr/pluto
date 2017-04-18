@@ -113,27 +113,21 @@ class Template extends HTMLTemplateElement {
 
         var repeat = this.getAttribute('repeat') || this.getAttribute('for')
         if (repeat) {
-            var fn = compileExpressions([{ expr: repeat }])
-            clone.items = (function(fn) {
-                return (obj) => fn(obj)[0] || []
-            })(fn)
+            repeat = compileExpressions([{ expr: repeat }])
+            clone.items = (obj) => repeat(obj)[0] || []
         }
 
         var elseIf = this.getAttribute('else-if')
         var cond = this.getAttribute('if') || elseIf
         if (cond) {
-            var fn = compileExpressions([{ expr: cond }])
-            clone.items = (function(fn) {
-                return (obj) => Boolean(fn(obj)[0])
-            })(fn)
+            cond = compileExpressions([{ expr: cond }])
+            clone.items = (obj) => Boolean(cond(obj)[0])
         }
 
         var else_ = this.hasAttribute('else') || elseIf
         if (else_) {
-            var fn = clone.items || Array
-            clone.items = (function(fn) {
-                return (obj) => obj.__plutoElse ? [] : fn(obj)
-            })(fn)
+            var else_ = clone.items || Array
+            clone.items = (obj) => obj.__plutoElse ? [] : else_(obj)
         }
 
         // we opt to compile the repeat/cond expressions separately than the
