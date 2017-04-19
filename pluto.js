@@ -289,6 +289,11 @@ class Renderer extends DocumentFragment {
             expr.render(el, v, obj)
         }
 
+        var ev = new Event('pluto-rendered', { bubles: false })
+        for (var el of this.paths) {
+            el.dispatchEvent(ev)
+        }
+
         obj.__plutoElse = else_
         return this
     }
