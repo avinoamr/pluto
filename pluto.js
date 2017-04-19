@@ -95,24 +95,24 @@ class Template extends HTMLTemplateElement {
                 continue
             }
 
+            // hide expresssions from the imported templates
             attr = attr.name
+            el.removeAttribute(attr)
+
             var render
             if (attr.startsWith('on-')) {
-                render = this._renderBindEvent(attr.slice(3)) // trim 'on-'
+                render = this._renderEvent(attr.slice(3)) // trim 'on-'
             } else if (['style', 'class'].indexOf(attr) !== -1) {
                 render = this._renderAttr(attr)
+            } else if (attr === 'for') {
+                render = this._renderFor(el)
+            } else if (attr === 'if') {
+                render = this._renderIf(el)
             } else {
                 render = this._renderProp(snakeToCamelCase(attr))
             }
 
             exprs.push({ expr, path, attr, render })
-
-            // avoid having the attribute on import as it might arrive
-            // un-rendered to web-components. NB: this means that the
-            // constructor of elements wouldn't have access to the rendered
-            // values initially. Perhaps we should initially render into a
-            // clone before finally importing.
-            el.removeAttribute(attr)
         }
 
         return exprs
@@ -128,7 +128,7 @@ class Template extends HTMLTemplateElement {
             : el.removeAttribute(attr)
     }
 
-    _renderBindEvent(evName) {
+    _renderEvent(evName) {
         return function(el, v) {
             var evs = el.__plutoEvs || (el.__plutoEvs = {})
             if (evs[evName] !== v) {
@@ -138,8 +138,43 @@ class Template extends HTMLTemplateElement {
         }
     }
 
-    _renderItems(content, exprs) {
+    _renderIf(el) {
+        var renderFn = this._renderItems(el)
         return function(el, items, obj) {
+            return renderFn(el, items ? [obj.item] : [], obj)
+        }
+    }
+
+    _renderFor(el) {
+        var renderFn = this._renderItems(el)
+        return function(el, items, obj) {
+            if (items && items.length !== undefined) {
+                return renderFn(el, items, obj)
+            }
+
+            if (typeof items === 'object') {
+                items = Object.keys(items).map(function(k) {
+                    return { key: k, value: items[k] }
+                })
+            }
+
+            if (typeof items === 'boolean') {
+                items = Number(items) // 0 or 1
+            }
+
+            if (typeof items === 'number') {
+                items = new Array(items) // range-items, repeat N times.
+                items = Array.from(items).map(() => obj.item)
+            }
+
+            return renderFn(el, items, obj)
+        }
+    }
+
+    _renderItems(el) {
+        el.replaceWith(document.createTextNode(''))
+        var { content, exprs } = this.compile(el.content || el)
+        var renderFn = function(el, items, obj) {
             el.__items || (el.__items = [])
 
             // remove obsolete items
@@ -163,7 +198,6 @@ class Template extends HTMLTemplateElement {
             }
         }
     }
-
 }
 
 class Renderer extends DocumentFragment {
