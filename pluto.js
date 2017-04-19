@@ -102,8 +102,10 @@ class Template extends HTMLTemplateElement {
             var render
             if (attr.startsWith('on-')) {
                 render = this._renderEvent(attr.slice(3)) // trim 'on-'
-            } else if (['style', 'class'].indexOf(attr) !== -1) {
-                render = this._renderAttr(attr)
+            } else if (attr === 'class') {
+                render = this._renderClass()
+            } else if (attr === 'style') {
+                render = this._renderStyle()
             } else if (attr === 'for') {
                 render = this._renderFor(el)
             } else if (attr === 'if') {
@@ -122,10 +124,24 @@ class Template extends HTMLTemplateElement {
         return (el, v) => el[prop] = v
     }
 
-    _renderAttr(attr) {
-        return (el, v) => v
-            ? el.setAttribute(attr, v)
-            : el.removeAttribute(attr)
+    _renderClass() {
+        return function(el, v) {
+            if (typeof v === 'object') {
+                if (!Array.isArray(v)) {
+                    v = Object.keys(v).filter((k) => v[k])
+                }
+
+                return v.join(' ')
+            }
+
+            el.className = v
+        }
+    }
+
+    _renderStyle() {
+        return (el, v) => typeof v === 'object'
+            ? Object.assign(el.style, v)
+            : el.setAttribute('style', v)
     }
 
     _renderEvent(evName) {
@@ -327,8 +343,7 @@ function isExpressions(s) {
 // these expression for the provided input object
 function compileExpressions(exprs) {
     var refs = []
-    var code = 'this.__plutoT || (this.__plutoT = T.bind(this));\n'
-    code += exprs.map(function(expr, i) {
+    code = exprs.map(function(expr, i) {
         if (expr.expr === undefined) {
             return '' // can happen in nested templates
         }
@@ -337,12 +352,7 @@ function compileExpressions(exprs) {
             refs = refs.concat(getIdentifiers(expr.expr))
         }
 
-        var tagFn = ({
-            'class': 'classNameT',
-            'style': 'styleT'
-        })[expr.attr] || 'this.__plutoT'
-
-        return `arguments[0][${i}] = ${tagFn}\`${expr.expr}\``
+        return `arguments[0][${i}] = T\`${expr.expr}\``
     }).join(';\n')
 
     // define the local variables and bind root-level functions to the provided
@@ -382,26 +392,6 @@ function compileExpressions(exprs) {
         return arguments.length > 2 || typeof v === 'string'
             ? String.raw.apply(null, arguments)
             : v
-    }
-
-    function classNameT(s, v) {
-        if (typeof v === 'object') {
-            if (!Array.isArray(v)) {
-                v = Object.keys(v).filter((k) => v[k])
-            }
-
-            return v.join(' ')
-        }
-
-        return String.raw.apply(null, arguments)
-    }
-
-    function styleT(s, v) {
-        if (typeof v === 'object') {
-            return Object.keys(v).map((k) => k + ':' + v[k]).join('; ')
-        }
-
-        return String.raw.apply(null, arguments)
     }
 }
 
