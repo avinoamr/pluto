@@ -174,7 +174,7 @@ class Template extends HTMLTemplateElement {
     _renderItems(el) {
         el.replaceWith(document.createTextNode(''))
         var { content, exprs } = this.compile(el.content || el)
-        var renderFn = function(el, items, obj) {
+        return function(el, items, obj) {
             el.__items || (el.__items = [])
 
             // remove obsolete items
