@@ -9,7 +9,7 @@
         ${item.toUpperCase()}
 
         <ul>
-            <li repeat=${items}>${item}</li>
+            <li if=${show}>${item}</li>
             <!-- <li for=${items}>${item}</li> -->
             <!-- <template id='out' is='pluto-tpl' repeat="${items}">
                 <li>${item.toUpperCase()}</li>
