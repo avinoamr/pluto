@@ -106,8 +106,8 @@ class Template extends HTMLTemplateElement {
                 render = this._renderClass()
             } else if (attr === 'style') {
                 render = this._renderStyle()
-            } else if (attr === 'for') {
-                render = this._renderFor(el)
+            } else if (attr === 'repeat') {
+                render = this._renderRepeat(el)
             } else if (attr === 'if') {
                 render = this._renderIf(el)
             } else {
@@ -115,6 +115,12 @@ class Template extends HTMLTemplateElement {
             }
 
             exprs.push({ expr, path, attr, render })
+
+            if (render.__stopCompilation) {
+                // some directives (for) may require to stop the compilation as
+                // they handle the rest of it internally
+                break
+            }
         }
 
         return exprs
@@ -161,9 +167,9 @@ class Template extends HTMLTemplateElement {
         }
     }
 
-    _renderFor(el) {
+    _renderRepeat(el) {
         var renderFn = this._renderItems(el)
-        return function(el, items, obj) {
+        return Object.assign(function(el, items, obj) {
             if (items && items.length !== undefined) {
                 return renderFn(el, items, obj)
             }
@@ -184,7 +190,7 @@ class Template extends HTMLTemplateElement {
             }
 
             return renderFn(el, items, obj)
-        }
+        }, { __stopCompilation: true })
     }
 
     _renderItems(el) {
