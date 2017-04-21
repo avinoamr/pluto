@@ -235,20 +235,12 @@ class Renderer extends DocumentFragment {
         this.exprs = exprs
         this.items = items
 
-        this.elements = []
-        this.paths = {}
+        this.appendChild(document.importNode(this.tpl, true))
 
-        if (items) {
-            this.placeholder = document.createTextNode('')
-            this.appendChild(this.placeholder)
-        } else {
-            this.appendChild(document.importNode(this.tpl, true))
-
-            // copy the list of generated elements from the template in order
-            // to support removals
-            this.elements = [].map.call(this.childNodes, child => child)
-            this.paths = this.exprs.map((expr) => select(this, expr.path))
-        }
+        // copy the list of generated elements from the template in order
+        // to support removals
+        this.elements = [].map.call(this.childNodes, child => child)
+        this.paths = this.exprs.map((expr) => select(this, expr.path))
     }
 
     remove() {
@@ -258,54 +250,6 @@ class Renderer extends DocumentFragment {
     }
 
     render(obj) {
-        if (!this.items) {
-            return this._renderOne(obj)
-        }
-
-        var items = this.items(obj)
-        var item = obj.item
-        if (!Array.isArray(items) && typeof items === 'object') {
-            items = Object.keys(items).map(function(k) {
-                return { key: k, value: items[k] }
-            })
-        }
-
-        if (typeof items === 'boolean') {
-            items = Number(items) // 0 or 1
-        }
-
-        if (typeof items === 'number') {
-            items = new Array(items) // range-items, repeat N times.
-            items = Array.from(items).map(() => item)
-        }
-
-        obj.__plutoElse = obj.__plutoElse || items && items.length > 0
-
-        // remove obsolete items
-        while (this.elements.length > items.length) {
-            this.elements.pop().remove()
-        }
-
-        // update existing items
-        for (var i = 0; i < this.elements.length; i += 1) {
-            obj.item = items[i]
-            this.elements[i].render(obj)
-        }
-
-        // create new items
-        while (this.elements.length < items.length) {
-            var i = this.elements.length
-            obj.item = items[i]
-            var doc = new Renderer(this.tpl, this.exprs).render(obj)
-            this.elements.push(doc)
-            this.placeholder.before(doc)
-        }
-
-        obj.item = item // restore previous item value.
-        return this
-    }
-
-    _renderOne(obj) {
         var else_ = obj.__plutoElse
         obj.__plutoElse = false
 
