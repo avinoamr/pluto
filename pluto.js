@@ -231,11 +231,8 @@ class Template extends HTMLTemplateElement {
 class Renderer extends DocumentFragment {
     constructor(content, exprs, items) {
         super()
-        this.tpl = content
         this.exprs = exprs
-        this.items = items
-
-        this.appendChild(document.importNode(this.tpl, true))
+        this.appendChild(document.importNode(content, true))
 
         // copy the list of generated elements from the template in order
         // to support removals
