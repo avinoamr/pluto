@@ -31,11 +31,13 @@ class Template extends HTMLTemplateElement {
     }
 
     compile() {
-        var content = this.content
+        var content = this.content.cloneNode(true)
         var exprs = []
         var elements = [{ el: content, path: [] }]
         while (elements.length > 0) {
             var { el, path } = elements.shift()
+
+            this.constructor.modules.forEach((m) => m(el, path, exprs))
 
             var attrs = el.attributes || [];
             if (el.nodeName === '#text') {
@@ -68,7 +70,9 @@ class Template extends HTMLTemplateElement {
                 for (var i = 0 ; i < exprs.length ; i += 1) {
                     var expr = exprs[i]
                     var el = paths[i]
-                    el[expr.prop] = values[i]
+                    expr.render
+                        ? expr.render(el, values[i], obj)
+                        : (el[expr.prop] = values[i])
                 }
                 return this
             }
@@ -91,6 +95,50 @@ class Template extends HTMLTemplateElement {
         this.modules.push(compileFn)
     }
 }
+
+
+// class attributes behave differently because:
+//  1. we can't assign `el.class = value`. We need className
+//  2. we want to transform objects/arrays to text strings
+Template.addModule(function compileClass(el, path, exprs) {
+    var expr = el.getAttribute && isExpressions(el.getAttribute('class'))
+    if (!expr) {
+        return
+    }
+
+    el.removeAttribute('class')
+    exprs.push({ expr, path, render })
+
+    function render(el, v) {
+        if (typeof v === 'object') {
+            if (!Array.isArray(v)) {
+                v = Object.keys(v).filter((k) => v[k])
+            }
+
+            v = v.join(' ')
+        }
+
+        el.className = v
+    }
+})
+
+// style attributes behave differently because we can't just assign
+//     `el.style = value`
+Template.addModule(function compileStyle(el, path, exprs) {
+    var expr = el.getAttribute && isExpressions(el.getAttribute('style'))
+    if (!expr) {
+        return
+    }
+
+    el.removeAttribute('style')
+    exprs.push({ expr, path, render })
+
+    function render(el, v) {
+        typeof v === 'object'
+            ? Object.assign(el.style, v)
+            : el.setAttribute('style', v)
+    }
+})
 
 
 
