@@ -7,24 +7,6 @@
 
     <template is='pluto-tpl' id='roi'>
         ${item.toUpperCase()}
-
-        <ul>
-            <template if=${show} repeat=${items}>
-                <li>${item}</li>
-            </template>
-            <!-- <li repeat=${items}>${item}</li>
-            <li else=${show}>EMPTY?</li> -->
-            <!-- <li for=${items}>${item}</li> -->
-            <!-- <template id='out' is='pluto-tpl' repeat="${items}">
-                <li>${item.toUpperCase()}</li>
-                <template id='in' is='pluto-tpl' if=${show}>
-                    <li>${item.toLowerCase()}</li>
-                </template>
-            </template>
-            <template else>
-                <li>EMPTY!</li>
-            </template> -->
-        </ul>
     </template>
 
     <script>
@@ -32,13 +14,13 @@
     var doc = tpl.render({ show: true, item: 'hello', items: ['one', 'two'] })
     document.body.appendChild(doc)
 
-    setTimeout(function() {
-        doc.render({ item: 'cookie', items: ['three'] })
-    }, 500)
-
-    setTimeout(function() {
-        doc.render({ show: true, item: 'final', items: [] })
-    }, 1000)
+    // setTimeout(function() {
+    //     doc.render({ item: 'cookie', items: ['three'] })
+    // }, 500)
+    //
+    // setTimeout(function() {
+    //     doc.render({ show: true, item: 'final', items: [] })
+    // }, 1000)
     </script>
 </body>
 </html>

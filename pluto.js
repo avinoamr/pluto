@@ -27,6 +27,80 @@
  */
 class Template extends HTMLTemplateElement {
     render(obj) {
+        return this.compile()(obj)
+    }
+
+    compile() {
+        var content = this.content
+        var exprs = []
+        var elements = [{ el: content, path: [] }]
+        while (elements.length > 0) {
+            var { el, path } = elements.shift()
+
+            var attrs = el.attributes || [];
+            if (el.nodeName === '#text') {
+                attrs.push({ name: 'textContent', value: el.textContent })
+            }
+
+            for (var attr of attrs) {
+                var expr = isExpressions(attr.value)
+                if (expr === null) {
+                    continue
+                }
+
+                exprs.push({ expr, path, prop: snakeToCamelCase(attr.name) })
+            }
+
+            // enqueue children
+            el.childNodes.forEach(function(el, i) {
+                elements.push({ el, path: path.concat(['childNodes', i]) })
+            })
+        }
+
+        exprs = Object.assign(exprs, { eval: compileExpressions(exprs) })
+        return function (obj) {
+            var doc = document.importNode(content, true)
+            var elements = Array.from(doc.childNodes).map(child => child)
+            var paths = exprs.map((expr) => select(doc, expr.path))
+
+            doc.render = function(obj) {
+                var values = exprs.eval(obj)
+                for (var i = 0 ; i < exprs.length ; i += 1) {
+                    var expr = exprs[i]
+                    var el = paths[i]
+                    el[expr.prop] = values[i]
+                }
+                return this
+            }
+
+            doc.remove = function() {
+                while (elements.length > 0) {
+                    elements.pop().remove()
+                }
+            }
+
+            return doc.render(obj)
+        }
+    }
+
+    static get modules() {
+        return this._modules || (this._modules = [])
+    }
+
+    static addModule(compileFn) {
+        this.modules.push(compileFn)
+    }
+}
+
+
+
+
+
+
+
+
+class Templatex extends HTMLTemplateElement {
+    render(obj) {
         var compiled = this._compiled || (this._compiled = {})
         if (compiled.html !== this.innerHTML) { // recompile
             // console.log('RECOMPILE', this) // bad - nested cloned templates are re-compiled on every item
