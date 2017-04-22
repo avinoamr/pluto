@@ -111,7 +111,7 @@ class Template extends HTMLTemplateElement {
                 render = this._renderProp(snakeToCamelCase(attr))
             }
 
-            exprs.push({ expr, path, attr, render })
+            exprs.push({ expr, path, render })
 
             if (render.__stopCompilation) {
                 // some directives (for) may require to stop the compilation as
