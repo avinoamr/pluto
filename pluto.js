@@ -41,11 +41,9 @@ class Template extends HTMLTemplateElement {
     }
 
     compile(content) {
-        if (content.nodeName !== '#document-fragment') {
-            var doc = new DocumentFragment()
-            doc.appendChild(content.cloneNode(true))
-            content = doc
-        }
+        var doc = new DocumentFragment()
+        doc.appendChild(content.cloneNode(true))
+        content = doc
 
         var exprs = []
         var elements = [{ el: content, path: [] }]
