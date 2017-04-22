@@ -40,17 +40,6 @@ class Template extends HTMLTemplateElement {
         return new Renderer(content, exprs, items).render(obj)
     }
 
-    _renderIn(obj, el) {
-        if (el.__plutoRenderer) {
-            el.__plutoRenderer.render(obj)
-        } else {
-            var doc = this.render(obj)
-            el.replaceWith(doc)
-            el.__plutoRenderer = doc
-            el.remove = doc.remove.bind(doc)
-        }
-    }
-
     compile(content) {
         if (content.nodeName !== '#document-fragment') {
             var doc = new DocumentFragment()
