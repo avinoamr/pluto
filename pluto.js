@@ -188,65 +188,27 @@ class Template extends HTMLTemplateElement {
             el.obj = obj
             el[k] = v
         }
-
-        var renderFn = this._renderItems(el)
-        return Object.assign(function(el, items, obj) {
-            if (items && items.length !== undefined) {
-                return renderFn(el, items, obj)
-            }
-
-            if (typeof items === 'object') {
-                items = Object.keys(items).map(function(k) {
-                    return { key: k, value: items[k] }
-                })
-            }
-
-            if (typeof items === 'boolean') {
-                items = Number(items) // 0 or 1
-            }
-
-            if (typeof items === 'number') {
-                items = new Array(items) // range-items, repeat N times.
-                items = Array.from(items).map(() => obj.item)
-            }
-
-            return renderFn(el, items, obj)
-        }, { __stopCompilation: true })
-    }
-
-    _renderItems(el) {
-        el.replaceWith(document.createTextNode(''))
-        var { content, exprs } = this.compile(el.content || el)
-        return function(el, items, obj) {
-            el.__items || (el.__items = [])
-
-            // remove obsolete items
-            while (el.__items.length > items.length) {
-                el.__items.pop().remove()
-            }
-
-            // update existing items
-            for (var i = 0; i < el.__items.length; i += 1) {
-                obj.item = items[i]
-                el.__items[i].render(obj)
-            }
-
-            // create new items
-            while (el.__items.length < items.length) {
-                var i = el.__items.length
-                obj.item = items[i]
-                var doc = new Renderer(content, exprs).render(this.obj)
-                this.__items.push(doc)
-                this.before(doc)
-            }
-        }
     }
 }
 
 class RepeatedNode extends Text {
-
     set repeat(items) {
         this.__items || (this.__items = [])
+
+        if (!Array.isArray(items) && typeof items === 'object') {
+            items = Object.keys(items).map(function(k) {
+                return { key: k, value: items[k] }
+            })
+        }
+
+        if (typeof items === 'boolean') {
+            items = Number(items) // 0 or 1
+        }
+
+        if (typeof items === 'number') {
+            items = new Array(items) // range-items, repeat N times.
+            items = Array.from(items).map(() => this.obj.item)
+        }
 
         // remove obsolete items
         while (this.__items.length > items.length) {
