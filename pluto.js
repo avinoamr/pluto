@@ -170,7 +170,7 @@ class Template extends HTMLTemplateElement {
         var { content, exprs } = this.compile(el.content || el);
         el.replaceWith(new RepeatedNode())
         el.innerHTML = ''
-        return function(el, v, obj) {
+        return Object.assign(function(el, v, obj) {
             var isInited = el instanceof RepeatedNode
             if (!isInited) {
                 Object.setPrototypeOf(el, RepeatedNode.prototype)
@@ -180,14 +180,14 @@ class Template extends HTMLTemplateElement {
 
             el.obj = obj
             el.repeat = v ? [obj.item] : []
-        }
+        }, { __stopCompilation: true })
     }
 
     _renderRepeat(el, k) {
         var { content, exprs } = this.compile(el.content || el);
         el.replaceWith(new RepeatedNode())
         el.innerHTML = ''
-        return function(el, v, obj) {
+        return Object.assign(function(el, v, obj) {
             var isInited = el instanceof RepeatedNode
             if (!isInited) {
                 Object.setPrototypeOf(el, RepeatedNode.prototype)
@@ -197,11 +197,16 @@ class Template extends HTMLTemplateElement {
 
             el.obj = obj
             el[k] = v
-        }
+        }, { __stopCompilation: true })
     }
 }
 
 class RepeatedNode extends Text {
+    remove() {
+        this.repeat = [] // force the removal of the individual sub-nodes
+        Text.prototype.remove.apply(this, arguments)
+    }
+
     set repeat(items) {
         this.__items || (this.__items = [])
 
