@@ -107,10 +107,11 @@ Template.addModule(function compileRepeat(el, path, exprs) {
     // discontinue the current compilation
     el.removeAttribute('repeat')
     var renderInner = pluto(el).compile()
-    stopCompilation(el)
+    while (el.attributes.length) {
+        el.removeAttribute(el.attributes[0].name)
+    }
 
     exprs.push({ expr, path, render })
-
     function render(el, items, obj) {
         el.__items || (el.__items = [])
 
@@ -122,7 +123,7 @@ Template.addModule(function compileRepeat(el, path, exprs) {
         // update existing items
         for (var i = 0; i < el.__items.length; i += 1) {
             obj.item = items[i]
-            el.__items[i].render(this.obj)
+            el.__items[i].render(obj)
         }
 
         // create new items
