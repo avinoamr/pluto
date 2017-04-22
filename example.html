@@ -9,7 +9,8 @@
         ${item.toUpperCase()}
 
         <ul>
-            <li repeat=${items} if=${show}>${item}</li>
+            <li repeat=${items}>${item}</li>
+            <li else=${show}>EMPTY?</li>
             <!-- <li for=${items}>${item}</li> -->
             <!-- <template id='out' is='pluto-tpl' repeat="${items}">
                 <li>${item.toUpperCase()}</li>
@@ -33,7 +34,7 @@
     }, 500)
 
     setTimeout(function() {
-        doc.render({ show: true, item: 'final', items: ['ok'] })
+        doc.render({ show: true, item: 'final', items: [] })
     }, 1000)
     </script>
 </body>

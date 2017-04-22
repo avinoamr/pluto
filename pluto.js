@@ -112,6 +112,8 @@ class Template extends HTMLTemplateElement {
                 render = this._renderClass()
             } else if (attr === 'style') {
                 render = this._renderStyle()
+            } else if (attr === 'else') {
+                render = this._renderElse(el)
             } else if (attr === 'repeat') {
                 render = this._renderRepeat(el, 'repeat')
             } else if (attr === 'if') {
@@ -166,6 +168,23 @@ class Template extends HTMLTemplateElement {
         }
     }
 
+    _renderElse(el, k) {
+        var { content, exprs } = this.compile(el.content || el);
+        el.replaceWith(new RepeatedNode())
+        el.innerHTML = ''
+        return Object.assign(function(el, v, obj) {
+            var isInited = el instanceof RepeatedNode
+            if (!isInited) {
+                Object.setPrototypeOf(el, RepeatedNode.prototype)
+                el.content = content
+                el.exprs = exprs
+            }
+
+            el.obj = obj
+            el.repeat = obj.__plutoElse ? [] : [obj.item]
+        }, { __stopCompilation: true })
+    }
+
     _renderIf(el, k) {
         var { content, exprs } = this.compile(el.content || el);
         el.replaceWith(new RepeatedNode())
@@ -178,6 +197,7 @@ class Template extends HTMLTemplateElement {
                 el.exprs = exprs
             }
 
+            obj.__plutoElse = v
             el.obj = obj
             el.repeat = v ? [obj.item] : []
         }, { __stopCompilation: true })
@@ -195,6 +215,7 @@ class Template extends HTMLTemplateElement {
                 el.exprs = exprs
             }
 
+            obj.__plutoElse = v.length
             el.obj = obj
             el[k] = v
         }, { __stopCompilation: true })
