@@ -6,7 +6,11 @@
     <script src="pluto.js" charset="utf-8"></script>
 
     <template is='pluto-tpl' id='roi'>
-        <div>${item.toUpperCase()}</div>
+        <ul>
+            <template name="roi" repeat=${items}>
+                <li>${item}</li>
+            </template>
+        </ul>
     </template>
 
     <script>

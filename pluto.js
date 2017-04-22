@@ -37,7 +37,7 @@ class Template extends HTMLTemplateElement {
         while (elements.length > 0) {
             var { el, path } = elements.shift()
 
-            this.constructor.modules.forEach((m) => m(el, path, exprs))
+            Template.modules.forEach((m) => m(el, path, exprs))
 
             var attrs = el.attributes || [];
             if (el.nodeName === '#text') {
@@ -96,7 +96,48 @@ class Template extends HTMLTemplateElement {
     }
 }
 
+// REPEAT
+Template.addModule(function compileRepeat(el, path, exprs) {
+    var expr = el.getAttribute && isExpressions(el.getAttribute('repeat'))
+    if (!expr) {
+        return
+    }
 
+    // compile the inner template (the one without this repeat attribute) and
+    // discontinue the current compilation
+    el.removeAttribute('repeat')
+    var renderInner = pluto(el).compile()
+    stopCompilation(el)
+
+    exprs.push({ expr, path, render })
+
+    function render(el, items, obj) {
+        el.__items || (el.__items = [])
+
+        // remove obsolete items
+        while (el.__items.length > items.length) {
+            el.__items.pop().remove()
+        }
+
+        // update existing items
+        for (var i = 0; i < el.__items.length; i += 1) {
+            obj.item = items[i]
+            el.__items[i].render(this.obj)
+        }
+
+        // create new items
+        while (el.__items.length < items.length) {
+            var i = el.__items.length
+            obj.item = items[i]
+            var doc = renderInner(obj)
+            el.__items.push(doc)
+            el.before(doc)
+        }
+    }
+})
+
+
+// CLASS
 // class attributes behave differently because:
 //  1. we can't assign `el.class = value`. We need className
 //  2. we want to transform objects/arrays to text strings
@@ -122,6 +163,7 @@ Template.addModule(function compileClass(el, path, exprs) {
     }
 })
 
+// STYLE
 // style attributes behave differently because we can't just assign
 //     `el.style = value`
 Template.addModule(function compileStyle(el, path, exprs) {
@@ -439,6 +481,15 @@ class Renderer extends DocumentFragment {
 }
 
 // -- HELPER FUNCTIONS
+
+function stopCompilation(el) {
+    while (el.attributes.length) {
+        el.removeAttribute(el.attributes[0].name)
+    }
+    while (el.childNodes.length > 0) {
+        el.removeChild(el.childNodes[0])
+    }
+}
 
 // Searches for an element from root based on the property-path to the child
 // example: root = <body>, path = childNodes.3.childNode.7. Resolved by walking
