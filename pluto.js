@@ -30,8 +30,7 @@ class Template extends HTMLTemplateElement {
         var compiled = this._compiled || (this._compiled = {})
         if (compiled.html !== this.innerHTML) { // recompile
             // console.log('RECOMPILE', this) // bad - nested cloned templates are re-compiled on every item
-            var content = this.cloneNode(true).content
-            Object.assign(compiled, this.compile(content), {
+            Object.assign(compiled, this.compile(this.content), {
                 html: this.innerHTML
             })
         }
@@ -41,6 +40,9 @@ class Template extends HTMLTemplateElement {
     }
 
     compile(content) {
+        // first clone the compiled template as this compilation process is
+        // free to modify the DOM without causing these changes to be reflected
+        // externally
         var doc = new DocumentFragment()
         doc.appendChild(content.cloneNode(true))
         content = doc
