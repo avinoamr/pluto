@@ -206,14 +206,14 @@ class Template extends HTMLTemplateElement {
 
             obj.__plutoElse = v.length
             el.obj = obj
-            el[k] = v
+            el.repeat = v
         }, { __stopCompilation: true })
     }
 }
 
 class RepeatedNode extends Text {
     remove() {
-        this.repeat = [] // force the removal of the individual sub-nodes
+        this.repeat = [] // force removal of individual sub-nodes
         Text.prototype.remove.apply(this, arguments)
     }
 
