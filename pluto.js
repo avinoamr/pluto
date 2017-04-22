@@ -83,41 +83,46 @@ class Template extends HTMLTemplateElement {
             }
         }
 
-        // attributes
+        var directives = [
+            { attr: 'else', fn: RepeatedNode._renderElse },
+            { attr: 'if', fn: this._renderIf },
+            { attr: 'repeat', fn: this._renderRepeat }
+        ]
+
+        // handle all directives
+        var attrs = el.attributes || []
+        for (var directive of directives) {
+            var attr = attrs[directive.attr]
+            if (!attr) {
+                continue
+            }
+
+            var render = directive.fn.call(this, el)
+            if (!render) {
+                continue
+            }
+
+            el.removeAttribute(directive.attr)
+            var expr = isExpressions(attr.value)
+            exprs.push({ expr, path, render })
+        }
+
+        // remaining attributes
         for (var attr of el.attributes || []) {
             var expr = isExpressions(attr.value)
             if (expr === null) {
                 continue
             }
 
-            // hide expresssions from the imported templates
             attr = attr.name
             el.removeAttribute(attr)
-
-            var render
             if (attr.startsWith('on-')) {
-                render = this._renderEvent(attr.slice(3)) // trim 'on-'
-            } else if (attr === 'class') {
-                render = this._renderClass()
-            } else if (attr === 'style') {
-                render = this._renderStyle()
-            } else if (attr === 'else') {
-                render = this._renderElse(el)
-            } else if (attr === 'repeat') {
-                render = this._renderRepeat(el, 'repeat')
-            } else if (attr === 'if') {
-                render = this._renderIf(el)
+                var render = this._renderEvent(attr.slice(3)) // trim 'on-'
             } else {
-                render = this._renderProp(snakeToCamelCase(attr))
+                var render = this._renderProp(snakeToCamelCase(attr))
             }
 
             exprs.push({ expr, path, render })
-
-            if (render.__stopCompilation) {
-                // some directives (for) may require to stop the compilation as
-                // they handle the rest of it internally
-                break
-            }
         }
 
         return exprs
@@ -157,7 +162,7 @@ class Template extends HTMLTemplateElement {
         }
     }
 
-    _renderElse(el, k) {
+    _renderElse(el) {
         var { content, exprs } = this.compile(el.content || el);
         el.replaceWith(new RepeatedNode())
         el.innerHTML = ''
@@ -174,7 +179,7 @@ class Template extends HTMLTemplateElement {
         }, { __stopCompilation: true })
     }
 
-    _renderIf(el, k) {
+    _renderIf(el) {
         var { content, exprs } = this.compile(el.content || el);
         el.replaceWith(new RepeatedNode())
         el.innerHTML = ''
@@ -192,7 +197,7 @@ class Template extends HTMLTemplateElement {
         }, { __stopCompilation: true })
     }
 
-    _renderRepeat(el, k) {
+    _renderRepeat(el, attr) {
         var { content, exprs } = this.compile(el.content || el);
         el.replaceWith(new RepeatedNode())
         el.innerHTML = ''
@@ -212,6 +217,24 @@ class Template extends HTMLTemplateElement {
 }
 
 class RepeatedNode extends Text {
+    static renderItems(el, attr) {
+        var { content, exprs } = this.compile(el.content || el);
+        el.replaceWith(new RepeatedNode())
+        el.innerHTML = ''
+        return Object.assign(function(el, v, obj) {
+            var isInited = el instanceof RepeatedNode
+            if (!isInited) {
+                Object.setPrototypeOf(el, RepeatedNode.prototype)
+                el.content = content
+                el.exprs = exprs
+            }
+
+            obj.__plutoElse = v.length
+            el.obj = obj
+            el.repeat = v
+        })
+    }
+
     remove() {
         this.repeat = [] // force removal of individual sub-nodes
         Text.prototype.remove.apply(this, arguments)
