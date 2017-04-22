@@ -54,7 +54,7 @@ class Template extends HTMLTemplateElement {
     compile(content) {
         if (content.nodeName !== '#document-fragment') {
             var doc = new DocumentFragment()
-            doc.appendChild(content)
+            doc.appendChild(content.cloneNode(true))
             content = doc
         }
 
@@ -113,7 +113,7 @@ class Template extends HTMLTemplateElement {
             } else if (attr === 'style') {
                 render = this._renderStyle()
             } else if (attr === 'repeat') {
-                render = this._renderRepeat(el)
+                render = this._renderRepeat(el, 'repeat')
             } else if (attr === 'if') {
                 render = this._renderIf(el)
             } else {
@@ -173,7 +173,22 @@ class Template extends HTMLTemplateElement {
         }
     }
 
-    _renderRepeat(el) {
+    _renderRepeat(el, k) {
+        var { content, exprs } = this.compile(el.content || el);
+        el.replaceWith(new RepeatedNode())
+        el.innerHTML = ''
+        return function(el, v, obj) {
+            var isInited = el instanceof RepeatedNode
+            if (!isInited) {
+                Object.setPrototypeOf(el, RepeatedNode.prototype)
+                el.content = content
+                el.exprs = exprs
+            }
+
+            el.obj = obj
+            el[k] = v
+        }
+
         var renderFn = this._renderItems(el)
         return Object.assign(function(el, items, obj) {
             if (items && items.length !== undefined) {
@@ -220,10 +235,37 @@ class Template extends HTMLTemplateElement {
             while (el.__items.length < items.length) {
                 var i = el.__items.length
                 obj.item = items[i]
-                var doc = new Renderer(content, exprs).render(obj)
-                el.__items.push(doc)
-                el.before(doc)
+                var doc = new Renderer(content, exprs).render(this.obj)
+                this.__items.push(doc)
+                this.before(doc)
             }
+        }
+    }
+}
+
+class RepeatedNode extends Text {
+
+    set repeat(items) {
+        this.__items || (this.__items = [])
+
+        // remove obsolete items
+        while (this.__items.length > items.length) {
+            this.__items.pop().remove()
+        }
+
+        // update existing items
+        for (var i = 0; i < this.__items.length; i += 1) {
+            this.obj.item = items[i]
+            this.__items[i].render(this.obj)
+        }
+
+        // create new items
+        while (this.__items.length < items.length) {
+            var i = this.__items.length
+            this.obj.item = items[i]
+            var doc = new Renderer(this.content, this.exprs).render(this.obj)
+            this.__items.push(doc)
+            this.before(doc)
         }
     }
 }
