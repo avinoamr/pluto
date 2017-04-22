@@ -166,10 +166,20 @@ class Template extends HTMLTemplateElement {
         }
     }
 
-    _renderIf(el) {
-        var renderFn = this._renderItems(el)
-        return function(el, items, obj) {
-            return renderFn(el, items ? [obj.item] : [], obj)
+    _renderIf(el, k) {
+        var { content, exprs } = this.compile(el.content || el);
+        el.replaceWith(new RepeatedNode())
+        el.innerHTML = ''
+        return function(el, v, obj) {
+            var isInited = el instanceof RepeatedNode
+            if (!isInited) {
+                Object.setPrototypeOf(el, RepeatedNode.prototype)
+                el.content = content
+                el.exprs = exprs
+            }
+
+            el.obj = obj
+            el.repeat = v ? [obj.item] : []
         }
     }
 
@@ -195,17 +205,13 @@ class RepeatedNode extends Text {
     set repeat(items) {
         this.__items || (this.__items = [])
 
-        if (!Array.isArray(items) && typeof items === 'object') {
+        if (typeof items === 'object' && !Array.isArray(items)) {
             items = Object.keys(items).map(function(k) {
                 return { key: k, value: items[k] }
             })
-        }
-
-        if (typeof items === 'boolean') {
-            items = Number(items) // 0 or 1
-        }
-
-        if (typeof items === 'number') {
+        } else if (typeof items === 'boolean') {
+            items = items ? [this.obj.item] : [] // 0 or 1
+        } else if (typeof items === 'number') {
             items = new Array(items) // range-items, repeat N times.
             items = Array.from(items).map(() => this.obj.item)
         }
