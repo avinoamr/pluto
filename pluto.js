@@ -138,7 +138,7 @@ class Template extends HTMLTemplateElement {
             this.__items.pop().remove()
         }
 
-        HTMLTemplateElement.prototype.remove.apply(this, arguments)
+        this.constructor.prototype.remove.apply(this, arguments)
     }
 
     static get modules() {
@@ -250,10 +250,6 @@ Template.addModule(function compileRepeat(el, path, exprs) {
         tpl.content.appendChild(clone)
         clone = tpl
     }
-
-    // compile the inner template (the one without this repeat attribute) and
-    // discontinue the current compilation
-    var renderInner = pluto(clone).compile()
 
     // replace the element with the repeated node, and stop the compilation
     // loop for this element by emptying it.
