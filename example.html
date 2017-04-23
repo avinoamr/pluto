@@ -7,7 +7,9 @@
 
     <template is='pluto-tpl' id='roi'>
         <ul>
-            <li repeat=${items}>${item}</li>
+            <template repeat=${items}>
+                <li>${item}</li>
+            </template>
         </ul>
     </template>
 

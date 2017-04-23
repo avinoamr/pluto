@@ -192,28 +192,28 @@ Template.addModule(function compileRepeat(el, path, exprs) {
 
     el.removeAttribute('repeat')
 
-    if (el.localName !== 'template') {
-        var clone = el.cloneNode(true)
-        while (el.attributes.length > 0) {
-            el.removeAttribute(el.attributes[0].name)
-        }
-        el.innerHTML = ''
+    // stop compilation
+    var clone = el.cloneNode(true)
 
+    // Repeated items must be templates. Otherwise - coerce it into a template
+    // by creating a new template with the content of the input element
+    if (clone.localName !== 'template') {
         var tpl = document.createElement('template')
-        el.replaceWith(tpl)
         tpl.content.appendChild(clone)
-
-        el = tpl
+        clone = tpl
     }
 
     // compile the inner template (the one without this repeat attribute) and
     // discontinue the current compilation
-    var renderInner = pluto(el).compile()
-    while (el.attributes.length) {
+    var renderInner = pluto(clone).compile()
+
+    // replace the element with the repeated node, and stop the compilation
+    // loop for this element by emptying it.
+    el.replaceWith(new RepeatedNode())
+    while (el.attributes.length > 0) {
         el.removeAttribute(el.attributes[0].name)
     }
-
-    el.replaceWith(new RepeatedNode())
+    el.innerHTML = ''
 
     exprs.push({ expr, path, render })
     function render(el, items, obj) {
