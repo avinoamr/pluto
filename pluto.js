@@ -97,6 +97,8 @@ class Template extends HTMLTemplateElement {
 }
 
 
+// -- MODULES / EXTENSIONS
+
 // CLASS
 // class attributes behave differently because:
 //  1. we can't assign `el.class = value`. We need className
@@ -140,6 +142,38 @@ Template.addModule(function compileStyle(el, path, exprs) {
             ? Object.assign(el.style, v)
             : el.setAttribute('style', v)
     }
+})
+
+// ELSE-IF
+Template.addModule(function compileElseIf(el) {
+    var expr = el.getAttribute && isExpressions(el.getAttribute('else-if'))
+    if (!expr) {
+        return
+    }
+
+    el.removeAttribute('else-if')
+    el.setAttribute('else', '')
+    el.setAttribute('if', expr)
+})
+
+// ELSE
+Template.addModule(function compileElse(el) {
+    if (!el.hasAttribute || !el.hasAttribute('else')) {
+        return
+    }
+
+})
+
+
+// IF
+Template.addModule(function compileIf(el, path, exprs) {
+    var expr = el.getAttribute && isExpressions(el.getAttribute('if'))
+    if (!expr) {
+        return
+    }
+
+    el.removeAttribute('if')
+    el.setAttribute('repeat', expr)
 })
 
 
