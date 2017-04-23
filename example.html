@@ -6,21 +6,23 @@
     <script src="pluto.js" charset="utf-8"></script>
 
     <template is='pluto-tpl' id='roi'>
-        <template if=${show}>${item}</template>
+        <li repeat=${items}>${item}</li>
+        <li else if=${show}>EMPTY</li>
+        <li else>COOKIE</li>
     </template>
 
     <script>
     var tpl = pluto('#roi')
-    var doc = tpl.render({ show: true, item: 'hello', items: ['one', 'two'] })
+    var doc = tpl.render({ show: false, item: 'hello', items: [] })
     document.body.appendChild(doc)
 
-    setTimeout(function() {
-        doc.render({ item: 'cookie', items: ['three'] })
-    }, 500)
-
-    setTimeout(function() {
-        doc.render({ show: true, item: 'final', items: [] })
-    }, 1000)
+    // setTimeout(function() {
+    //     doc.render({ item: 'cookie', items: ['three'] })
+    // }, 500)
+    //
+    // setTimeout(function() {
+    //     doc.render({ show: true, item: 'final', items: [] })
+    // }, 1000)
     </script>
 </body>
 </html>
