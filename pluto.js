@@ -96,47 +96,6 @@ class Template extends HTMLTemplateElement {
     }
 }
 
-// REPEAT
-Template.addModule(function compileRepeat(el, path, exprs) {
-    var expr = el.getAttribute && isExpressions(el.getAttribute('repeat'))
-    if (!expr) {
-        return
-    }
-
-    // compile the inner template (the one without this repeat attribute) and
-    // discontinue the current compilation
-    el.removeAttribute('repeat')
-    var renderInner = pluto(el).compile()
-    while (el.attributes.length) {
-        el.removeAttribute(el.attributes[0].name)
-    }
-
-    exprs.push({ expr, path, render })
-    function render(el, items, obj) {
-        el.__items || (el.__items = [])
-
-        // remove obsolete items
-        while (el.__items.length > items.length) {
-            el.__items.pop().remove()
-        }
-
-        // update existing items
-        for (var i = 0; i < el.__items.length; i += 1) {
-            obj.item = items[i]
-            el.__items[i].render(obj)
-        }
-
-        // create new items
-        while (el.__items.length < items.length) {
-            var i = el.__items.length
-            obj.item = items[i]
-            var doc = renderInner(obj)
-            el.__items.push(doc)
-            el.before(doc)
-        }
-    }
-})
-
 
 // CLASS
 // class attributes behave differently because:
@@ -183,6 +142,84 @@ Template.addModule(function compileStyle(el, path, exprs) {
     }
 })
 
+
+// REPEAT
+Template.addModule(function compileRepeat(el, path, exprs) {
+    var expr = el.getAttribute && isExpressions(el.getAttribute('repeat'))
+    if (!expr) {
+        return
+    }
+
+    // compile the inner template (the one without this repeat attribute) and
+    // discontinue the current compilation
+    el.removeAttribute('repeat')
+    var renderInner = pluto(el).compile()
+    while (el.attributes.length) {
+        el.removeAttribute(el.attributes[0].name)
+    }
+
+    el.replaceWith(new RepeatedNode())
+
+    exprs.push({ expr, path, render })
+    function render(el, items, obj) {
+        RepeatedNode.upgrade(el)
+        el.renderItems(renderInner, items, obj)
+    }
+})
+
+// RepeatedNode is a DOM element that's used to control other sibling repeated
+// elements via the Repeat module above. By control we mean to add, remove or
+// re-render these repeated elements. It also acts as the insertion point for
+// new elements. It's a Text node in order to make it invisible in
+// `node.children` and dev tools.
+class RepeatedNode extends Text {
+    static upgrade(el) {
+        return el instanceof RepeatedNode
+            ? el
+            : Object.setPrototypeOf(el, this.prototype)
+    }
+
+    remove() {
+        this.repeat = [] // force removal of individual sub-nodes
+        Text.prototype.remove.apply(this, arguments)
+    }
+
+    renderItems(renderInner, items, obj) {
+        this.obj = obj
+        this.__items || (this.__items = [])
+
+        if (typeof items === 'object' && !Array.isArray(items)) {
+            items = Object.keys(items).map(function(k) {
+                return { key: k, value: items[k] }
+            })
+        } else if (typeof items === 'boolean') {
+            items = items ? [this.obj.item] : [] // 0 or 1
+        } else if (typeof items === 'number') {
+            items = new Array(items) // range-items, repeat N times.
+            items = Array.from(items).map(() => this.obj.item)
+        }
+
+        // remove obsolete items
+        while (this.__items.length > items.length) {
+            this.__items.pop().remove()
+        }
+
+        // update existing items
+        for (var i = 0; i < this.__items.length; i += 1) {
+            this.obj.item = items[i]
+            this.__items[i].render(this.obj)
+        }
+
+        // create new items
+        while (this.__items.length < items.length) {
+            var i = this.__items.length
+            this.obj.item = items[i]
+            var doc = renderInner(obj)
+            this.__items.push(doc)
+            this.before(doc)
+        }
+    }
+}
 
 
 
@@ -378,66 +415,6 @@ class Templatex extends HTMLTemplateElement {
             el.obj = obj
             el.repeat = v
         }, { __stopCompilation: true })
-    }
-}
-
-class RepeatedNode extends Text {
-    static renderItems(el, attr) {
-        var { content, exprs } = this.compile(el.content || el);
-        el.replaceWith(new RepeatedNode())
-        el.innerHTML = ''
-        return Object.assign(function(el, v, obj) {
-            var isInited = el instanceof RepeatedNode
-            if (!isInited) {
-                Object.setPrototypeOf(el, RepeatedNode.prototype)
-                el.content = content
-                el.exprs = exprs
-            }
-
-            obj.__plutoElse = v.length
-            el.obj = obj
-            el.repeat = v
-        })
-    }
-
-    remove() {
-        this.repeat = [] // force removal of individual sub-nodes
-        Text.prototype.remove.apply(this, arguments)
-    }
-
-    set repeat(items) {
-        this.__items || (this.__items = [])
-
-        if (typeof items === 'object' && !Array.isArray(items)) {
-            items = Object.keys(items).map(function(k) {
-                return { key: k, value: items[k] }
-            })
-        } else if (typeof items === 'boolean') {
-            items = items ? [this.obj.item] : [] // 0 or 1
-        } else if (typeof items === 'number') {
-            items = new Array(items) // range-items, repeat N times.
-            items = Array.from(items).map(() => this.obj.item)
-        }
-
-        // remove obsolete items
-        while (this.__items.length > items.length) {
-            this.__items.pop().remove()
-        }
-
-        // update existing items
-        for (var i = 0; i < this.__items.length; i += 1) {
-            this.obj.item = items[i]
-            this.__items[i].render(this.obj)
-        }
-
-        // create new items
-        while (this.__items.length < items.length) {
-            var i = this.__items.length
-            this.obj.item = items[i]
-            var doc = new Renderer(this.content, this.exprs).render(this.obj)
-            this.__items.push(doc)
-            this.before(doc)
-        }
     }
 }
 

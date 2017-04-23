@@ -18,13 +18,13 @@
     var doc = tpl.render({ show: true, item: 'hello', items: ['one', 'two'] })
     document.body.appendChild(doc)
 
-    // setTimeout(function() {
-    //     doc.render({ item: 'cookie', items: ['three'] })
-    // }, 500)
-    //
-    // setTimeout(function() {
-    //     doc.render({ show: true, item: 'final', items: [] })
-    // }, 1000)
+    setTimeout(function() {
+        doc.render({ item: 'cookie', items: ['three'] })
+    }, 500)
+
+    setTimeout(function() {
+        doc.render({ show: true, item: 'final', items: [] })
+    }, 1000)
     </script>
 </body>
 </html>
