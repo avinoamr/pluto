@@ -63,13 +63,7 @@ class Template extends HTMLTemplateElement {
         return function (obj) {
             var doc = document.importNode(content, true)
             var elements = Array.from(doc.childNodes).map(child => child)
-            var paths = exprs.map(function(expr) {
-                var el = select(doc, expr.path)
-                if (!el) {
-                    console.log('MISSING??', doc, expr.path)
-                }
-                return el
-            })
+            var paths = exprs.map(expr => select(doc, expr.path))
 
             doc.render = function(obj) {
                 var values = exprs.eval(obj)
@@ -227,7 +221,14 @@ Template.addModule(function compileIf(el, path, exprs) {
     }
 
     el.removeAttribute('if')
-    el.setAttribute('repeat', expr)
+    rewire(el)
+
+    exprs.push({ expr, path, render })
+    function render(el, items, obj) {
+        items = items ? [obj.item] : []
+        pluto(el)._renderItems(items, obj)
+    }
+
 })
 
 
@@ -239,12 +240,19 @@ Template.addModule(function compileRepeat(el, path, exprs) {
     }
 
     el.removeAttribute('repeat')
+    rewire(el)
 
-    // stop compilation
-    var clone = el.cloneNode(true)
+    exprs.push({ expr, path, render })
+    function render(el, items, obj) {
+        pluto(el)._renderItems(items, obj)
+    }
+})
 
+
+function rewire(el) {
     // Repeated items must be templates. Otherwise - coerce it into a template
     // by creating a new template with the content of the input element
+    var clone = el.cloneNode(true)
     if (clone.localName !== 'template') {
         var tpl = document.createElement('template')//new Template()
         tpl.content.appendChild(clone)
@@ -259,11 +267,8 @@ Template.addModule(function compileRepeat(el, path, exprs) {
     }
     el.innerHTML = ''
 
-    exprs.push({ expr, path, render })
-    function render(el, items, obj) {
-        pluto(el)._renderItems(items, obj)
-    }
-})
+    return clone
+}
 
 
 

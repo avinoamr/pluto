@@ -6,16 +6,7 @@
     <script src="pluto.js" charset="utf-8"></script>
 
     <template is='pluto-tpl' id='roi'>
-        <ul>
-            <template repeat=${items}>
-                <li>${item}</li>
-            </template>
-        </ul>
-
-        <hr />
-        <ul>
-            <li repeat=${items}>${item}</li>
-        </ul>
+        <template if=${show}>${item}</template>
     </template>
 
     <script>
