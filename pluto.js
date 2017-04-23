@@ -63,7 +63,13 @@ class Template extends HTMLTemplateElement {
         return function (obj) {
             var doc = document.importNode(content, true)
             var elements = Array.from(doc.childNodes).map(child => child)
-            var paths = exprs.map((expr) => select(doc, expr.path))
+            var paths = exprs.map(function(expr) {
+                var el = select(doc, expr.path)
+                if (!el) {
+                    console.log('MISSING??', doc, expr.path)
+                }
+                return el
+            })
 
             doc.render = function(obj) {
                 var values = exprs.eval(obj)
@@ -184,9 +190,24 @@ Template.addModule(function compileRepeat(el, path, exprs) {
         return
     }
 
+    el.removeAttribute('repeat')
+
+    if (el.localName !== 'template') {
+        var clone = el.cloneNode(true)
+        while (el.attributes.length > 0) {
+            el.removeAttribute(el.attributes[0].name)
+        }
+        el.innerHTML = ''
+
+        var tpl = document.createElement('template')
+        el.replaceWith(tpl)
+        tpl.content.appendChild(clone)
+
+        el = tpl
+    }
+
     // compile the inner template (the one without this repeat attribute) and
     // discontinue the current compilation
-    el.removeAttribute('repeat')
     var renderInner = pluto(el).compile()
     while (el.attributes.length) {
         el.removeAttribute(el.attributes[0].name)
