@@ -210,6 +210,9 @@ Template.addModule(function compileElse(el) {
         return
     }
 
+    el.removeAttribute('else')
+    el._elseExpr = true
+    el.attributes.repeat || el.setAttribute('repeat', '')
 })
 
 
@@ -221,29 +224,43 @@ Template.addModule(function compileIf(el, path, exprs) {
     }
 
     el.removeAttribute('if')
-    rewire(el)
-
-    exprs.push({ expr, path, render })
-    function render(el, items, obj) {
-        items = items ? [obj.item] : []
-        pluto(el)._renderItems(items, obj)
-    }
-
+    el._ifExpr = expr
+    el.attributes.repeat || el.setAttribute('repeat', '')
 })
 
 
 // REPEAT
 Template.addModule(function compileRepeat(el, path, exprs) {
-    var expr = el.getAttribute && isExpressions(el.getAttribute('repeat'))
-    if (!expr) {
+    var repeatExpr = el.getAttribute && isExpressions(el.getAttribute('repeat'))
+    var ifExpr = el._ifExpr
+    var elseExpr = el._elseExpr
+    if (!repeatExpr && !ifExpr && !elseExpr) {
         return
     }
+
+    var repeatFn = repeatExpr
+        ? compileExpressions([{ expr: repeatExpr }])
+        : function() {}
+
+    var ifFn = ifExpr
+        ? compileExpressions([{ expr: ifExpr }])
+        : function () { return [true] }
+
+
+    // main expression is either the repeat or if (or 'true' for else.)
+    var expr = '${1}'
 
     el.removeAttribute('repeat')
     rewire(el)
 
     exprs.push({ expr, path, render })
     function render(el, items, obj) {
+        var items = repeatFn(obj)[0]
+        items = items.filter(function (item) {
+            obj.item = item
+            return ifFn(obj)[0]
+        })
+
         pluto(el)._renderItems(items, obj)
     }
 })
