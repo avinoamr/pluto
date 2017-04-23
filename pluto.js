@@ -93,6 +93,54 @@ class Template extends HTMLTemplateElement {
         }
     }
 
+    _renderItems(items, obj) {
+        if (!this._placeholder) {
+            this._placeholder = document.createTextNode('')
+            this.replaceWith(this._placeholder)
+            this.__items = []
+        }
+        this.obj = obj
+
+        if (typeof items === 'object' && !Array.isArray(items)) {
+            items = Object.keys(items).map(function(k) {
+                return { key: k, value: items[k] }
+            })
+        } else if (typeof items === 'boolean') {
+            items = items ? [this.obj.item] : [] // 0 or 1
+        } else if (typeof items === 'number') {
+            items = new Array(items) // range-items, repeat N times.
+            items = Array.from(items).map(() => this.obj.item)
+        }
+
+        // remove obsolete items
+        while (this.__items.length > items.length) {
+            this.__items.pop().remove()
+        }
+
+        // update existing items
+        for (var i = 0; i < this.__items.length; i += 1) {
+            this.obj.item = items[i]
+            this.__items[i].render(this.obj)
+        }
+
+        // create new items
+        while (this.__items.length < items.length) {
+            var i = this.__items.length
+            this.obj.item = items[i]
+            var doc = this.compile()(obj)
+            this.__items.push(doc)
+            this._placeholder.before(doc)
+        }
+    }
+
+    remove() {
+        while (this.__items && this.__items.length > 0) {
+            this.__items.pop().remove()
+        }
+
+        HTMLTemplateElement.prototype.remove.apply(this, arguments)
+    }
+
     static get modules() {
         return this._modules || (this._modules = [])
     }
@@ -198,7 +246,7 @@ Template.addModule(function compileRepeat(el, path, exprs) {
     // Repeated items must be templates. Otherwise - coerce it into a template
     // by creating a new template with the content of the input element
     if (clone.localName !== 'template') {
-        var tpl = document.createElement('template')
+        var tpl = document.createElement('template')//new Template()
         tpl.content.appendChild(clone)
         clone = tpl
     }
@@ -209,7 +257,7 @@ Template.addModule(function compileRepeat(el, path, exprs) {
 
     // replace the element with the repeated node, and stop the compilation
     // loop for this element by emptying it.
-    el.replaceWith(new RepeatedNode())
+    el.replaceWith(clone)
     while (el.attributes.length > 0) {
         el.removeAttribute(el.attributes[0].name)
     }
@@ -217,66 +265,9 @@ Template.addModule(function compileRepeat(el, path, exprs) {
 
     exprs.push({ expr, path, render })
     function render(el, items, obj) {
-        RepeatedNode.upgrade(el)
-        el.renderItems(renderInner, items, obj)
+        pluto(el)._renderItems(items, obj)
     }
 })
-
-// RepeatedNode is a DOM element that's used to control other sibling repeated
-// elements via the Repeat module above. By control we mean to add, remove or
-// re-render these repeated elements. It also acts as the insertion point for
-// new elements. It's a Text node in order to make it invisible in
-// `node.children` and dev tools.
-class RepeatedNode extends Text {
-    static upgrade(el) {
-        return el instanceof RepeatedNode
-            ? el
-            : Object.setPrototypeOf(el, this.prototype)
-    }
-
-    remove() {
-        this.repeat = [] // force removal of individual sub-nodes
-        Text.prototype.remove.apply(this, arguments)
-    }
-
-    renderItems(renderInner, items, obj) {
-        this.obj = obj
-        this.__items || (this.__items = [])
-
-        if (typeof items === 'object' && !Array.isArray(items)) {
-            items = Object.keys(items).map(function(k) {
-                return { key: k, value: items[k] }
-            })
-        } else if (typeof items === 'boolean') {
-            items = items ? [this.obj.item] : [] // 0 or 1
-        } else if (typeof items === 'number') {
-            items = new Array(items) // range-items, repeat N times.
-            items = Array.from(items).map(() => this.obj.item)
-        }
-
-        // remove obsolete items
-        while (this.__items.length > items.length) {
-            this.__items.pop().remove()
-        }
-
-        // update existing items
-        for (var i = 0; i < this.__items.length; i += 1) {
-            this.obj.item = items[i]
-            this.__items[i].render(this.obj)
-        }
-
-        // create new items
-        while (this.__items.length < items.length) {
-            var i = this.__items.length
-            this.obj.item = items[i]
-            var doc = renderInner(obj)
-            this.__items.push(doc)
-            this.before(doc)
-        }
-    }
-}
-
-
 
 
 
