@@ -6,7 +6,7 @@
     <script src="pluto.js" charset="utf-8"></script>
 
     <template is='pluto-tpl' id='roi'>
-        <li repeat=${items} if="${item.name == 'Or'}">${item.name}</li>
+        <li if="${!show}">${item}</li>
         <!-- <li else if=${show}>EMPTY</li>
         <li else>COOKIE</li> -->
     </template>

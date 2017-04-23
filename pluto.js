@@ -229,7 +229,7 @@ Template.addModule(function compileIf(el, path, exprs) {
 })
 
 
-// REPEAT
+// REPEAT / IF / ELSE-IF / ELSE
 Template.addModule(function compileRepeat(el, path, exprs) {
     var repeatExpr = el.getAttribute && isExpressions(el.getAttribute('repeat'))
     var ifExpr = el._ifExpr
@@ -240,7 +240,7 @@ Template.addModule(function compileRepeat(el, path, exprs) {
 
     var repeatFn = repeatExpr
         ? compileExpressions([{ expr: repeatExpr }])
-        : function() {}
+        : function(obj) { return [[obj.item]] }
 
     var ifFn = ifExpr
         ? compileExpressions([{ expr: ifExpr }])
