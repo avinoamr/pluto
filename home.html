@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pluto</title>
+    <style>
+    html, body {
+        margin: 0;
+        padding: 0;
+        font-family: "Helvetica Neue", Helvetica, arial, freesans, clean, sans-serif;
+        font-weight: 200;
+        font-size: 18px;
+    }
+
+    header {
+        height: 300px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(252, 242, 255, .6);
+    }
+
+    .code {
+        padding: 20px;
+        margin: 10px 0;
+        border-radius: 10px;
+        background: #1D1F21;
+    }
+
+    .editor {
+        width: 100%;
+    }
+
+    h1, h2, h3 {
+        font-weight: 200;
+        margin-top: 0;
+    }
+
+    section {
+        position: relative;
+        margin: 30px 60px;
+        width: 33%;
+    }
+
+    section aside {
+        position: absolute;
+        left: -40px;
+        top: 0;
+        color: #737373;
+        font-weight: 400;
+    }
+
+    </style>
+</head>
+<body>
+    <script src="pluto.js" charset="utf-8"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.6/ace.js" charset="utf-8"></script>
+
+    <section>
+        <h1><aside>01</aside> Expressions</h1>
+
+        Use <code>${EXPR}</code> to denote an expression to be evaluated upon
+        rendering:
+
+        <template is='pluto-code'>
+            <template id='tpl1' is='pluto-template'>
+                <h1>${message}</h1>
+            </template>
+        </template>
+
+        You can use expressions either in text content of elements, or as
+        attributes. You can also generate strings by concatinating expressions:
+
+        <template is='pluto-code'>
+            <template is='pluto-template'>
+                <a href="http://www.google.com/#q=${search}">
+                    Search for ${search}
+                </a>
+            </template>
+        </template>
+
+        Internally, Pluto compiles these expressions into Template Literals and
+        evaluates them when the template is rendered. This means that any valid
+        Javascript expression can be used, for example:
+
+
+        <template is='pluto-code'>
+            <template is='pluto-template'>
+                <h1>${message.toUpperCase()}</h1>
+            </template>
+        </template>
+
+    </section>
+
+    <section>
+        <h1><aside>02</aside> Properties &amp; Attributes</h1>
+
+        When assigning an expression to an attribute - Pluto doesn't set the
+        attribute itself on the DOM element, but instead sets it property in
+        camelCase format.
+
+        For example, the following:
+
+        <template is='pluto-code'>
+            <template is='pluto-template'>
+                <a href=${target}></a>
+            </template>
+        </template>
+
+        <p>Doesn't use <code>el.setAttribute('href', value)</code>, but it sets
+        <code>el.href = value</code>. This is because attributes can only be
+        strings, but sometimes (especially in Custom Elements) you might want to
+        pass in arrays or objects.</p>
+
+        <p>This behavior is safe and correct for most standard HTML elements and
+        attributes because they're configured such that the property always
+        reflects the attribute. In the example above, setting the
+        <code>href</code> property or attribute is interchangable. It's also a
+        standard convention for WebComponents to be able to accept their input
+        via properties, as is the case in React and Polymer. It's suggested
+        that all of your custom elements will also behave similarily.</p>
+
+        <p>There are a few exceptions though, noteably the <code>class</code>
+        attribute is renamed to <code>className</code>. In this case, Pluto
+        takes care of this convertion for you using a rendering directive, so
+        you can use either <code>class</code> or <code>class-name</code>.</p>
+
+        In fact, pluto adds some syntactic sugar around the <code>class</code>
+        attribute to allow object and array inputs. For example:
+
+        <template is='pluto-code'>
+            <template is='pluto-template'>
+                <div class="${['hidden', 'flex']}">...</div>
+                <div class="${{ hidden: true, flex: false }}">...</div>
+            </template>
+        </template>
+
+        Similarily, the <code>style</code> attribute behaves differently by
+        allowing objects instead of just strings:
+
+        <template is='pluto-code'>
+            <template is='pluto-template'>
+                <div style="${{background: 'red'}}">...</div>
+            </template>
+        </template>
+
+    </section>
+
+    <section>
+        <h1><aside>03</aside> Conditionals</h1>
+
+        As you've seen above, Pluto includes special directives that can modify
+        the normal flow of setting properties. You can even implement your own
+        directives (see below). Another such example is the conditional
+        directives, which is achieved with the <code>if</code>,
+        <code>else-if</code> and <code>else</code> directives:
+
+        <template is='pluto-code'>
+            <template is='pluto-template'>
+                <div if="${value == 'first'}">...</div>
+                <div else-if="${value == 'second'}">...</div>
+                <div else>...</div>
+            </template>
+        </template>
+
+        You can also apply these directives to a complete sub-template for cases
+        where you want multiple DOM elements to be rendered:
+
+        <template is='pluto-code'>
+            <template is='pluto-template'>
+                <template if="${value == 'first'}">
+                    <h1>First!</h1>
+                    <div>...</div>
+                </template>
+            </template>
+        </template>
+
+        Note that these directives can be mildly expansive to re-render because
+        they create and destroy elements in the DOM instead of just updating the
+        state of existing elements. It's advised to only use these directives
+        for states that don't change very frequently. For other cases, it's
+        better to hide the elements with <code>hidden</code> (see below).
+
+    </section>
+
+
+    <section>
+        <h1><aside>04</aside> Repeats</h1>
+
+        The <code>repeat</code> directive, like the <code>conditional</code>
+        ones described below, generates and destroys elements based on the
+        rendered input. But it's used to render multiple repeated elements:
+
+        <template is='pluto-code'>
+            <template is='pluto-template'>
+                <ul>
+                    <li repeat=${items}>${item}</li>
+                </ul>
+            </template>
+        </template>
+
+        The input can also be a number in order to create a range:
+
+        <template is='pluto-code'>
+            <template is='pluto-template'>
+                <ul>
+                    <li repeat=${5}>Item</li>
+                </ul>
+            </template>
+        </template>
+
+        When paired with the conditional <code>if</code> directive, you can
+        filter out some of the items:
+
+        <template is='pluto-code'>
+            <template is='pluto-template'>
+                <ul>
+                    <li repeat=${items} if="${item != 'skip'}">
+                        ${item}
+                    </li>
+                </ul>
+            </template>
+        </template>
+
+        Finally, you can use an <code>else</code>-block to create empty states
+        for cases when the list is empty:
+
+        <template is='pluto-code'>
+            <template is='pluto-template'>
+                <ul>
+                    <li repeat=${items}>${item}</li>
+                    <li else>No items. Create one?</li>
+                </ul>
+            </template>
+        </template>
+    </section>
+
+    <section>
+        <h1><aside>04</aside> Directive Extensions</h1>
+
+        <p>For the most part, using the normal flow of setting properties is the
+        correct way to go. If you need some special behavior, it's better to
+        include it in your custom elements or mixins as setter functions.
+        However sometimes, you may want to add a global directive that will
+        apply to all elements.<p>
+
+        For example, lets say we want to add a special <code>hidden</code>
+        directive that will hide elements by setting their <code>display</code>
+        style property to <code>"none"</code>. We can achieve this by
+        registering a new directive:
+
+        <template is='pluto-code'>
+            <script>
+            pluto.Template.directive('hidden', function() {
+                return function(el, value) {
+                    el.style.display = value ? '' : 'hidden'
+                }
+            })
+            </script>
+        </template>
+
+        <p>The external function will only trigger once per element upon
+        compilation of the template. Its return value is a rendering function
+        that can be triggered very frequently with every new render.</p>
+
+        <strong>Tip</strong>: This <code>hidden</code> directive is also
+        included in Pluto (implemented differently).
+
+    </section>
+
+    <template id='pluto-code'>
+        <div class="code">
+            <div class="editor">${html}</div>
+        </div>
+    </template>
+
+    <script>
+    var tpl = pluto('#pluto-code')
+    var codes = document.querySelectorAll('[is="pluto-code"]')
+    Array.from(codes).forEach(function (code) {
+        var minIndent = Infinity
+        var html = code.innerHTML.split('\n')
+            .filter(function (line) {
+                return line.trim()
+            })
+            .map(function (line) {
+                var indent = /^( *)/.exec(line)[0].length
+                minIndent = Math.min(minIndent, indent)
+                return line
+            })
+            .map(function (line) {
+                return line.slice(minIndent)
+            })
+            .join('\n')
+
+
+        var doc = tpl.render({ html: html })
+        var editor = doc.querySelector('.editor')
+        editor.style.height = 1.5 * html.split('\n').length + 'em'
+        code.replaceWith(doc)
+        editor = ace.edit(editor)
+        editor.$blockScrolling = Infinity
+        editor.getSession().setMode("ace/mode/html")
+        editor.setTheme("ace/theme/tomorrow_night")
+        editor.renderer.setShowGutter(false)
+    })
+
+    </script>
+</body>
+</html>
